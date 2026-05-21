@@ -1,0 +1,214 @@
+/* ============================================================================
+   WALIDA — Global Styles
+   ----------------------------------------------------------------------------
+   • Tailwind base (with our custom palette from tailwind.config.js)
+   • CSS variables for the iridescent client palette and dark admin palette
+   • Glassmorphism utility classes (.glass, .glass-strong, .glass-card,
+     .glass-dark) — soft frosted panels with hairline gradient borders
+   • Coral→peach CTA gradient (.btn-coral)
+   • Liquid hero gradient mask (.hero-mask)
+   • Pure motion helpers: float, shimmer, fade-up, glow
+   ============================================================================ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ----------  ROOT TOKENS  ---------- */
+:root {
+  --pearl:    #FFF6F0;
+  --cream:    #FFE7D9;
+  --lavender: #E7D9FF;
+  --rose:     #FFD5DC;
+  --baby:     #D9ECFF;
+  --coral:    #FF8B7A;
+  --peach:    #FFB4A2;
+  --ink:      #1B1530;
+  --hairline: rgba(255, 255, 255, 0.6);
+
+  /* Admin (dark) */
+  --graphite: #0F1117;
+  --slate-950: #0B0D14;
+  --slate-900: #12151F;
+}
+
+/* ----------  BASE  ---------- */
+@layer base {
+  html, body, #root { height: 100%; }
+
+  body {
+    @apply font-sans text-ink antialiased;
+    background: var(--pearl);
+    background-image: theme('backgroundImage.aurora');
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior: none;
+  }
+
+  /* Arabic text uses Tajawal automatically when wrapped in [lang=ar] */
+  [lang='ar'], [dir='rtl'] {
+    @apply font-arabic;
+  }
+
+  /* Beautiful hairline scrollbars */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--coral), var(--peach));
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* Selection */
+  ::selection { background: var(--coral); color: white; }
+
+  /* Reduce iOS tap highlight */
+  * { -webkit-tap-highlight-color: transparent; }
+}
+
+/* ----------  GLASSMORPHISM UTILITIES  ---------- */
+@layer components {
+
+  /* Standard frosted glass — used on cards, nav bars, modals. */
+  .glass {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid var(--hairline);
+    box-shadow: 0 20px 50px -20px rgba(255, 139, 122, 0.25),
+                0 8px 24px -12px rgba(186, 156, 255, 0.18);
+  }
+
+  /* Heavier blur — for the hero, bottom nav, sheets. */
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(48px) saturate(200%);
+    -webkit-backdrop-filter: blur(48px) saturate(200%);
+    border: 1px solid rgba(255,255,255,0.75);
+  }
+
+  /* Pure-white product card with diffused floating shadow. */
+  .glass-card {
+    @apply rounded-3xl bg-white;
+    box-shadow: 0 30px 60px -30px rgba(255, 139, 122, 0.35),
+                0 10px 30px -15px rgba(186, 156, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+  }
+
+  /* Admin dark glass — graphite + indigo glow. */
+  .glass-dark {
+    background: rgba(18, 21, 31, 0.65);
+    backdrop-filter: blur(32px) saturate(160%);
+    -webkit-backdrop-filter: blur(32px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 25px 60px -30px rgba(0,0,0,0.65);
+  }
+
+  /* Hairline gradient border — the signature Walida edge. */
+  .border-hairline {
+    position: relative;
+  }
+  .border-hairline::before {
+    content: '';
+    position: absolute; inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg,
+      rgba(255,139,122,0.6),
+      rgba(231,217,255,0.6),
+      rgba(217,236,255,0.6));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Signature CTA — coral → peach gradient with subtle inner sheen. */
+  .btn-coral {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl
+           font-semibold text-white tracking-wide;
+    background: linear-gradient(135deg, var(--coral) 0%, var(--peach) 100%);
+    box-shadow: 0 12px 30px -10px rgba(255, 139, 122, 0.55),
+                inset 0 1px 0 rgba(255,255,255,0.45);
+    transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s ease;
+  }
+  .btn-coral:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 18px 40px -8px rgba(255, 139, 122, 0.7),
+                inset 0 1px 0 rgba(255,255,255,0.55);
+  }
+  .btn-coral:active { transform: translateY(0) scale(0.98); }
+
+  /* Soft pill button — used as the "Add to bag" secondary action. */
+  .btn-pill {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl
+           text-sm font-semibold;
+    background: rgba(255, 213, 220, 0.6);
+    color: #C44569;
+    border: 1px solid rgba(255, 213, 220, 0.9);
+    transition: transform .25s ease, background .25s ease;
+  }
+  .btn-pill:hover { background: rgba(255, 213, 220, 0.9); transform: translateY(-1px); }
+
+  /* Hero gradient alpha-mask — melts the looping video into the page. */
+  .hero-mask {
+    -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent 100%);
+            mask-image: linear-gradient(180deg, #000 70%, transparent 100%);
+  }
+
+  /* Floating animation helper. */
+  .floaty { animation: walida-float 6s ease-in-out infinite; }
+
+  /* Shimmer text used for the brand wordmark. */
+  .text-shimmer {
+    background: linear-gradient(120deg,
+      var(--coral) 0%, var(--peach) 30%, var(--lavender) 55%,
+      var(--peach) 80%, var(--coral) 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+            background-clip: text;
+    color: transparent;
+    animation: walida-shimmer 6s linear infinite;
+  }
+
+  /* Glow ring used around the AI loading spinner. */
+  .glow-ring {
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.6),
+      0 0 30px 4px rgba(255,180,162,0.6),
+      0 0 80px 10px rgba(255,139,122,0.4);
+  }
+
+  /* Hidden scrollbar for horizontal carousels. */
+  .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+
+  /* Soft chip — category pills, status badges. */
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(255,255,255,0.8);
+    color: var(--ink);
+    backdrop-filter: blur(12px);
+  }
+}
+
+/* ----------  KEYFRAMES  ---------- */
+@keyframes walida-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+@keyframes walida-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes walida-rise {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Page transition baseline — Framer Motion variants drive the rest. */
+.page-enter { animation: walida-rise .6s cubic-bezier(.22,1,.36,1) both; }
