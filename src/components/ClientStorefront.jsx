@@ -12,15 +12,18 @@
 //   5. Bottom nav       → glassmorphism dock (home, grid, heart, cart, user)
 // =============================================================================
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import {
-  Search, Home, Grid, Heart, ShoppingBag, User, Sparkles, ChevronLeft
+  Search, Home, Grid, Heart, ShoppingBag, User, Sparkles, ChevronLeft,
+  X, Trash2, Box, AlertCircle, RefreshCw
 } from 'lucide-react';
 
 import ProductCard3D from './ProductCard3D.jsx';
+import ProductGridCard from './ProductGridCard.jsx';
+import ProductDetail from './ProductDetail.jsx';
 import { useCart } from '../App.jsx';
 import { db } from '../firebase.js';
 
@@ -35,11 +38,14 @@ const CATEGORIES = [
   { id: 'shoes',   ar: 'أحذية',      en: 'Shoes' }
 ];
 
-// Hero loop — luxury b-roll from a stock provider. Swap with your own MP4.
-const HERO_VIDEO =
-  'https://cdn.coverr.co/videos/coverr-a-girl-running-in-a-field-of-flowers-2284/1080p.mp4';
-const HERO_FALLBACK =
-  'https://images.unsplash.com/photo-1519340241574-2cec6aef0c01?auto=format&fit=crop&w=1600&q=80';
+// Hero — editorial children's-wear photography matching the Baraa Kids
+// brand identity (pastel clothing on hangers, soft gradient background).
+// Swap `HERO_IMAGE` with your own Cloudinary upload to use the exact
+// Facebook cover. Set `HERO_VIDEO` to a non-empty string to use a video
+// instead — falls back to the still image automatically.
+const HERO_IMAGE =
+  'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?auto=format&fit=crop&w=1800&q=85';
+const HERO_VIDEO = '';
 
 // ---------------------------------------------------------------------------
 //  Header — minimal, floating, scroll-reactive.
@@ -61,9 +67,9 @@ function Header() {
         <ChevronLeft size={16} className="rotate-180" />
       </Link>
       <div className="text-center leading-tight">
-        <div className="font-arabic text-2xl font-extrabold text-ink">وليدة</div>
+        <div className="font-arabic text-2xl font-extrabold text-ink">براءة</div>
         <div className="text-shimmer text-[11px] tracking-[0.45em] font-semibold uppercase">
-          Walida
+          Baraa Kids
         </div>
       </div>
       <button className="grid place-items-center w-10 h-10 rounded-full glass">
@@ -79,41 +85,75 @@ function Header() {
 function Hero() {
   return (
     <section className="relative mx-4 mt-24 rounded-[28px] overflow-hidden hero-mask">
-      <div className="relative aspect-[16/12] sm:aspect-[16/9] bg-gradient-to-br from-cream via-rose to-baby">
-        <video
-          className="absolute inset-0 w-full h-full object-cover"
-          src={HERO_VIDEO}
-          poster={HERO_FALLBACK}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
+      <div className="relative aspect-[16/12] sm:aspect-[16/9] bg-gradient-to-br from-rose via-lavender to-baby">
+
+        {/* Hero visual — video if configured, otherwise the editorial still. */}
+        {HERO_VIDEO ? (
+          <video
+            className="absolute inset-0 w-full h-full object-cover"
+            src={HERO_VIDEO}
+            poster={HERO_IMAGE}
+            autoPlay muted loop playsInline preload="metadata"
+          />
+        ) : (
+          <motion.img
+            src={HERO_IMAGE}
+            alt="Baraa Kids — premium children's apparel"
+            initial={{ scale: 1.06 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
+
+        {/* Decorative pastel orbs (a la the Facebook cover) */}
+        <motion.span
+          aria-hidden
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 0.85, y: 0 }}
+          transition={{ duration: 1.2, delay: 0.4 }}
+          className="absolute top-6 left-10 w-10 h-10 rounded-full bg-white/55 blur-[1px]"
         />
-        {/* Soft brand overlay */}
+        <motion.span
+          aria-hidden
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 0.75, y: 0 }}
+          transition={{ duration: 1.2, delay: 0.6 }}
+          className="absolute top-20 right-24 w-6 h-6 rounded-full bg-rose/80"
+        />
+        <motion.span
+          aria-hidden
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 0.8, y: 0 }}
+          transition={{ duration: 1.2, delay: 0.8 }}
+          className="absolute bottom-24 left-1/3 w-8 h-8 rounded-full bg-baby/85"
+        />
+
+        {/* Soft brand overlay — melts the image into the page background */}
         <div
           aria-hidden
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(180deg, rgba(255,246,240,0) 40%, rgba(255,246,240,0.55) 88%, rgba(255,246,240,1) 100%)'
+              'linear-gradient(180deg, rgba(255,246,240,0) 35%, rgba(255,246,240,0.55) 85%, rgba(255,246,240,1) 100%)'
           }}
         />
-        {/* Floating editorial caption */}
+
+        {/* Editorial caption matching the Facebook cover wording */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.2 }}
-          className="absolute bottom-6 right-6 left-6 sm:left-auto sm:max-w-sm text-right text-white drop-shadow"
+          className="absolute bottom-6 right-6 left-6 sm:left-auto sm:max-w-md text-right text-ink drop-shadow-sm"
         >
-          <span className="chip bg-white/40 text-white border-white/30">
-            <Sparkles size={12} /> مجموعة الربيع
+          <span className="chip bg-white/70 text-coral border-white/80">
+            <Sparkles size={12} /> تقنية 3D
           </span>
           <h1 className="font-arabic mt-3 text-3xl sm:text-4xl font-extrabold leading-tight">
-            أناقة طفولية تُروى كحكاية
+            ملابس الأطفال الراقية
           </h1>
-          <p className="mt-2 text-sm font-medium text-white/90 max-w-xs sm:max-w-none ml-auto">
-            تصاميم محدودة، أقمشة ناعمة، وألوان كأنها من حلم.
+          <p className="mt-2 text-sm font-medium text-ink/80 max-w-xs sm:max-w-none ml-auto">
+            متجركم الإلكتروني لملابس الأطفال الراقية — تصاميم محدودة بتقنية ثلاثية الأبعاد.
           </p>
         </motion.div>
       </div>
@@ -192,10 +232,75 @@ function EmptyState() {
 }
 
 // ---------------------------------------------------------------------------
-//  Product grid — stagger reveal of 3D cards
+//  Skeleton grid — animated placeholders while we wait for the first
+//  Firestore snapshot. Prevents the "blank page" feeling.
 // ---------------------------------------------------------------------------
-function ProductGrid({ products }) {
-  if (!products.length) return <EmptyState />;
+function SkeletonGrid() {
+  return (
+    <section className="mt-6 px-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pb-32">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: i * 0.05 }}
+          className="relative aspect-[3/4] rounded-[26px] overflow-hidden glass-card"
+        >
+          <div
+            className="absolute inset-0 bg-gradient-to-br from-rose via-cream to-baby"
+            style={{
+              backgroundSize: '200% 100%',
+              animation: 'walida-shimmer 2.4s linear infinite'
+            }}
+          />
+          <div className="absolute inset-x-3 bottom-3 grid gap-1.5">
+            <div className="h-3 w-2/3 rounded-full bg-white/60" />
+            <div className="h-3 w-1/3 rounded-full bg-white/50" />
+          </div>
+        </motion.div>
+      ))}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+//  Error state — surfaces Firestore subscription failures so the page is
+//  never silently blank.
+// ---------------------------------------------------------------------------
+function ErrorState({ message, onRetry }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mx-4 mt-8 pb-32"
+    >
+      <div className="glass-card border-hairline rounded-3xl px-6 py-10 text-center">
+        <div className="grid place-items-center w-14 h-14 mx-auto rounded-3xl bg-rose-400/15 border border-rose-400/30">
+          <AlertCircle size={22} className="text-rose-500" />
+        </div>
+        <h3 className="font-arabic mt-4 text-xl font-extrabold text-ink">
+          تعذّر تحميل المنتجات
+        </h3>
+        <p className="text-ink/60 text-sm mt-2 max-w-sm mx-auto">{message}</p>
+        {onRetry && (
+          <button onClick={onRetry} className="btn-pill mt-5 mx-auto">
+            <RefreshCw size={14} /> إعادة المحاولة
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+//  Product grid — full-image cards (ProductGridCard) with stagger reveal.
+//  Tapping a card calls `onOpen(product)` → the detail sheet.
+//  Multiplexes between loading / error / empty / grid states.
+// ---------------------------------------------------------------------------
+function ProductGrid({ products, loading, error, onRetry, onOpen }) {
+  if (error)              return <ErrorState message={error} onRetry={onRetry} />;
+  if (loading)            return <SkeletonGrid />;
+  if (!products.length)   return <EmptyState />;
   return (
     <motion.section
       initial="hidden"
@@ -216,7 +321,7 @@ function ProductGrid({ products }) {
               show:   { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } }
             }}
           >
-            <ProductCard3D product={p} index={i} compact />
+            <ProductGridCard product={p} index={i} onOpen={onOpen} />
           </motion.div>
         ))}
       </AnimatePresence>
@@ -225,16 +330,16 @@ function ProductGrid({ products }) {
 }
 
 // ---------------------------------------------------------------------------
-//  Bottom navigation — glass dock
+//  Bottom navigation — glass dock with real click actions.
 // ---------------------------------------------------------------------------
-function BottomNav() {
+function BottomNav({ active, onSelect }) {
   const { count, favorites } = useCart() ?? {};
   const items = [
-    { id: 'home', icon: Home, active: true },
-    { id: 'grid', icon: Grid },
-    { id: 'fav',  icon: Heart, badge: favorites?.length },
-    { id: 'cart', icon: ShoppingBag, badge: count },
-    { id: 'me',   icon: User }
+    { id: 'home', icon: Home,        label: 'الرئيسية' },
+    { id: 'grid', icon: Grid,        label: 'الفئات'   },
+    { id: 'fav',  icon: Heart,       label: 'المفضّلة', badge: favorites?.length },
+    { id: 'cart', icon: ShoppingBag, label: 'السلة',    badge: count },
+    { id: 'me',   icon: User,        label: 'حسابي'    }
   ];
   return (
     <motion.nav
@@ -244,23 +349,211 @@ function BottomNav() {
       className="fixed bottom-4 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[420px] z-50"
     >
       <div className="glass-strong border-hairline rounded-3xl flex items-center justify-between px-3 py-2">
-        {items.map(({ id, icon: Icon, active, badge }) => (
-          <button
-            key={id}
-            className={`relative w-12 h-12 grid place-items-center rounded-2xl transition-colors ${
-              active ? 'bg-rose text-coral' : 'text-ink/70 hover:text-ink'
-            }`}
-          >
-            <Icon size={18} />
-            {badge ? (
-              <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 grid place-items-center rounded-full bg-coral text-white text-[10px] font-bold">
-                {badge}
-              </span>
-            ) : null}
-          </button>
-        ))}
+        {items.map(({ id, icon: Icon, label, badge }) => {
+          const isActive = active === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-label={label}
+              onClick={() => onSelect(id)}
+              className={`relative w-12 h-12 grid place-items-center rounded-2xl transition-all active:scale-95 ${
+                isActive ? 'bg-rose text-coral shadow-inner' : 'text-ink/70 hover:text-ink hover:bg-white/40'
+              }`}
+            >
+              <Icon size={18} />
+              {badge ? (
+                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 grid place-items-center rounded-full bg-coral text-white text-[10px] font-bold">
+                  {badge}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
       </div>
     </motion.nav>
+  );
+}
+
+// ---------------------------------------------------------------------------
+//  Bottom sheet — slide-up panel used for cart, favorites, profile, etc.
+// ---------------------------------------------------------------------------
+function Sheet({ open, onClose, title, children }) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-40 bg-ink/30 backdrop-blur-md"
+          />
+          <motion.div
+            key="sheet"
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={0.2}
+            onDragEnd={(_, info) => { if (info.offset.y > 90) onClose(); }}
+            className="fixed bottom-0 inset-x-0 z-50 glass-strong border-hairline rounded-t-[28px] max-h-[80vh] overflow-hidden flex flex-col"
+          >
+            <div className="pt-3 pb-1 grid place-items-center">
+              <span className="w-10 h-1.5 rounded-full bg-ink/15" />
+            </div>
+            <div className="px-5 pt-2 pb-3 flex items-center justify-between">
+              <h3 className="font-arabic text-xl font-extrabold text-ink">{title}</h3>
+              <button
+                onClick={onClose}
+                className="grid place-items-center w-9 h-9 rounded-full glass text-ink/70"
+                aria-label="إغلاق"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 pb-8">
+              {children}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ---------------------------------------------------------------------------
+//  Cart sheet — shows the user's basket, totals, and a checkout CTA.
+// ---------------------------------------------------------------------------
+function CartSheet({ open, onClose }) {
+  const cart = useCart();
+  if (!cart) return null;
+  const { items, total, remove } = cart;
+
+  return (
+    <Sheet open={open} onClose={onClose} title="سلّتك">
+      {items.length === 0 ? (
+        <div className="grid place-items-center text-center py-14">
+          <div className="grid place-items-center w-16 h-16 rounded-3xl bg-rose shadow-glow mb-4">
+            <ShoppingBag size={22} className="text-coral" />
+          </div>
+          <p className="font-semibold text-ink">السلّة فارغة</p>
+          <p className="text-sm text-ink/55 mt-1">أضيفي قطعة لتظهر هنا.</p>
+        </div>
+      ) : (
+        <>
+          <ul className="divide-y divide-ink/5">
+            {items.map((it) => (
+              <li key={it.id} className="py-3 flex items-center gap-3">
+                <div className="w-14 h-14 rounded-2xl overflow-hidden bg-rose shrink-0">
+                  {it.imageUrl ? (
+                    <img src={it.imageUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full grid place-items-center">
+                      <Box size={16} className="text-coral" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-ink truncate">{it.nameAr}</div>
+                  <div className="text-xs text-ink/55">
+                    {it.qty} × {it.price} دج
+                  </div>
+                </div>
+                <button
+                  onClick={() => remove(it.id)}
+                  className="grid place-items-center w-8 h-8 rounded-full bg-rose/40 text-coral hover:bg-rose/70 transition"
+                  aria-label="حذف"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-4 glass-card !rounded-2xl p-4 flex items-center justify-between">
+            <span className="text-sm text-ink/70">الإجمالي</span>
+            <span className="text-lg font-bold text-coral">{total} <span className="text-xs text-ink/60 font-medium">دج</span></span>
+          </div>
+
+          <button className="btn-coral w-full mt-4">
+            <Sparkles size={14} /> إتمام الشراء
+          </button>
+        </>
+      )}
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+//  Favorites sheet — quick view of liked products.
+// ---------------------------------------------------------------------------
+function FavoritesSheet({ open, onClose, products }) {
+  const cart = useCart();
+  const liked = products.filter((p) => cart?.favorites?.includes(p.id));
+  return (
+    <Sheet open={open} onClose={onClose} title="مفضّلتك">
+      {liked.length === 0 ? (
+        <div className="grid place-items-center text-center py-14">
+          <div className="grid place-items-center w-16 h-16 rounded-3xl bg-rose mb-4">
+            <Heart size={22} className="text-coral" />
+          </div>
+          <p className="font-semibold text-ink">لا توجد قطع محفوظة</p>
+          <p className="text-sm text-ink/55 mt-1">اضغطي القلب على أي منتج لإضافته هنا.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          {liked.map((p) => {
+            const photo = p.imageUrl || p.images?.[0]?.url;
+            return (
+              <div key={p.id} className="glass-card overflow-hidden">
+                <div className="aspect-square bg-rose">
+                  {photo && <img src={photo} alt={p.nameAr} className="w-full h-full object-cover" />}
+                </div>
+                <div className="p-3 text-right">
+                  <div className="text-sm font-semibold text-ink truncate">{p.nameAr}</div>
+                  <div className="text-coral font-bold mt-1 text-sm">
+                    {p.price} <span className="text-ink/60 text-xs font-medium">دج</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+//  Profile sheet — gateway to admin login + future customer profile.
+// ---------------------------------------------------------------------------
+function ProfileSheet({ open, onClose }) {
+  return (
+    <Sheet open={open} onClose={onClose} title="حسابي">
+      <div className="py-4 grid gap-3">
+        <div className="glass-card !rounded-2xl p-4 text-center">
+          <div className="grid place-items-center w-14 h-14 mx-auto rounded-3xl bg-coral-peach shadow-glow">
+            <User size={20} className="text-white" />
+          </div>
+          <p className="mt-3 font-semibold text-ink">مرحباً بكِ في براءة</p>
+          <p className="text-sm text-ink/55 mt-1">
+            ميزات الحساب الكامل قريباً — متابعة الطلبات، العناوين، التفضيلات.
+          </p>
+        </div>
+
+        <Link
+          to="/admin/login"
+          onClick={onClose}
+          className="btn-pill justify-center w-full"
+        >
+          <Sparkles size={14} />
+          دخول لوحة الإدارة
+        </Link>
+      </div>
+    </Sheet>
   );
 }
 
@@ -270,15 +563,54 @@ function BottomNav() {
 export default function ClientStorefront() {
   const [active, setActive] = useState('all');
   const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [refreshTick, setRefreshTick] = useState(0);
+  const [navTab, setNavTab] = useState('home');     // home | grid | fav | cart | me
+  const [openSheet, setOpenSheet] = useState(null); // 'cart' | 'fav' | 'me' | null
+  const [openProduct, setOpenProduct] = useState(null);
+  const categoryRef = useRef(null);
 
-  // Live products subscription — anything added from /admin/new shows up here
-  // instantly thanks to Firestore's onSnapshot.
+  // Nav button handler — routes to the right action per icon.
+  function handleNavSelect(id) {
+    setNavTab(id);
+    switch (id) {
+      case 'home':
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setOpenSheet(null);
+        break;
+      case 'grid':
+        categoryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setOpenSheet(null);
+        break;
+      case 'fav':  setOpenSheet('fav');  break;
+      case 'cart': setOpenSheet('cart'); break;
+      case 'me':   setOpenSheet('me');   break;
+      default: setOpenSheet(null);
+    }
+  }
+
+  // Close the sheet → restore the home tab as active.
   useEffect(() => {
+    if (!openSheet && navTab !== 'home' && navTab !== 'grid') {
+      setNavTab('home');
+    }
+  }, [openSheet]); // eslint-disable-line
+
+  // Live products subscription — anything added from /admin/new shows up
+  // instantly. We deliberately DO NOT pass an `orderBy('createdAt')` clause:
+  // Firestore would silently drop any document that's missing the field
+  // (e.g. older products from before timestamps were added). We sort
+  // client-side instead.
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    let unsub;
     try {
-      const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
-      const unsub = onSnapshot(q, (snap) => {
-        setProducts(
-          snap.docs.map((d) => {
+      unsub = onSnapshot(
+        collection(db, 'products'),
+        (snap) => {
+          const list = snap.docs.map((d) => {
             const data = d.data();
             // Backwards-compat: support both `imageUrl` (single) and `images[]`.
             const images = Array.isArray(data.images) && data.images.length
@@ -287,14 +619,35 @@ export default function ClientStorefront() {
                 ? [{ url: data.imageUrl, is3DSource: true }]
                 : [];
             return { id: d.id, ...data, images };
-          })
-        );
-      });
-      return unsub;
+          });
+          list.sort((a, b) => {
+            const ta = a.createdAt?.seconds ?? 0;
+            const tb = b.createdAt?.seconds ?? 0;
+            return tb - ta;
+          });
+          if (import.meta.env.DEV) {
+            console.log(`[walida] products snapshot → ${list.length} item(s)`);
+          }
+          setProducts(list);
+          setLoading(false);
+        },
+        (err) => {
+          console.warn('[walida] products subscription error', err);
+          setError(
+            err.code === 'permission-denied'
+              ? 'القواعد ترفض القراءة. تأكّدي أن firestore.rules منشورة في Firebase Console.'
+              : (err.message || 'تعذّر الاتصال بـ Firestore.')
+          );
+          setLoading(false);
+        }
+      );
     } catch (e) {
-      console.warn('Products subscription unavailable', e);
+      console.warn('[walida] products subscription init failed', e);
+      setError(e.message || 'تعذّر بدء الاتصال بـ Firestore.');
+      setLoading(false);
     }
-  }, []);
+    return () => unsub?.();
+  }, [refreshTick]);
 
   const filtered = useMemo(
     () => (active === 'all' ? products : products.filter((p) => p.category === active)),
@@ -310,9 +663,29 @@ export default function ClientStorefront() {
     <div className="min-h-screen pb-32 bg-pearl-sheen">
       <Header />
       <Hero />
-      <CategoryStrip active={active} onChange={setActive} />
-      <ProductGrid products={filtered} />
-      <BottomNav />
+      <div ref={categoryRef}>
+        <CategoryStrip active={active} onChange={setActive} />
+      </div>
+      <ProductGrid
+        products={filtered}
+        loading={loading}
+        error={error}
+        onRetry={() => setRefreshTick((n) => n + 1)}
+        onOpen={setOpenProduct}
+      />
+
+      <BottomNav active={navTab} onSelect={handleNavSelect} />
+
+      <CartSheet      open={openSheet === 'cart'} onClose={() => setOpenSheet(null)} />
+      <FavoritesSheet open={openSheet === 'fav'}  onClose={() => setOpenSheet(null)} products={products} />
+      <ProfileSheet   open={openSheet === 'me'}   onClose={() => setOpenSheet(null)} />
+
+      {/* Product detail — opens on card tap */}
+      <ProductDetail
+        product={openProduct}
+        open={!!openProduct}
+        onClose={() => setOpenProduct(null)}
+      />
     </div>
   );
 }

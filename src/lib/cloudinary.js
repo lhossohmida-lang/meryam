@@ -117,15 +117,31 @@ function decorateError(xhr) {
   return new Error(msg);
 }
 
-/** Quick health check used by the admin UI to verify config. */
+/**
+ * 1×1 transparent PNG used by `pingCloudinary` to test the preset against
+ * the image endpoint (works with the default unsigned preset which usually
+ * accepts images only). Saved as bytes to avoid a base64 round-trip.
+ */
+const PING_PNG_BYTES = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+  0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+  0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+  0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
+  0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82
+]);
+
+/** Quick health check — uploads a 1×1 PNG to verify cloud + preset. */
 export async function pingCloudinary() {
   if (!isCloudinaryConfigured()) {
     return { ok: false, reason: 'missing-env' };
   }
   try {
-    // Send a tiny 1-byte raw upload to confirm cloud name + preset are valid.
-    const ping = new Blob([new Uint8Array([1])], { type: 'application/octet-stream' });
-    await uploadToCloudinary(ping, { resourceType: 'raw', folder: 'walida/_diagnostics' });
+    const png = new Blob([PING_PNG_BYTES], { type: 'image/png' });
+    await uploadToCloudinary(png, {
+      resourceType: 'image',
+      folder: 'walida/_diagnostics'
+    });
     return { ok: true };
   } catch (error) {
     return { ok: false, error };

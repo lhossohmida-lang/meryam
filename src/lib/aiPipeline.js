@@ -106,17 +106,17 @@ async function simulatedPipeline(file, onProgress) {
     { label: 'Estimating depth & topology…', percent: 46, delay: 1100 },
     { label: 'Sculpting geometry…', percent: 68, delay: 1300 },
     { label: 'Applying PBR textures…', percent: 86, delay: 1100 },
-    { label: 'Optimising .glb for web…', percent: 97, delay: 700 }
+    { label: 'Finalising preview…', percent: 97, delay: 700 }
   ];
   for (const s of steps) {
     onProgress({ label: s.label, percent: s.percent });
     await new Promise((r) => setTimeout(r, s.delay));
   }
-  // Generate a deterministic placeholder GLB (8 bytes header + minimal payload).
-  // Real Storage upload still happens — only the bytes are synthetic.
-  const placeholder = new Blob([await file.arrayBuffer()], { type: 'model/gltf-binary' });
   onProgress({ label: 'Done', percent: 100 });
-  return { blob: placeholder, jobId: cryptoId(), previewUrl: null };
+  // In simulation mode we do NOT fabricate a fake .glb — the storefront card
+  // falls back to its iridescent proxy. Set `simulated: true` so the UI can
+  // tell the user no real 3D was generated.
+  return { blob: null, jobId: cryptoId(), previewUrl: null, simulated: true };
 }
 
 function cryptoId() {

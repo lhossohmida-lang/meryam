@@ -15,6 +15,8 @@ import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 import ClientStorefront from './components/ClientStorefront.jsx';
 import AdminDashboard from './components/AdminDashboard.jsx';
 import AIProductCreator from './components/AIProductCreator.jsx';
+import AdminLogin from './components/AdminLogin.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 // ---------------------------------------------------------------------------
 //  Cart context — minimal but real. Shared by ProductCard3D, the bottom-nav
@@ -123,8 +125,28 @@ export default function App() {
         <AnimatePresence mode="wait" initial={false}>
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<Page><ClientStorefront /></Page>} />
-            <Route path="/admin" element={<Page><AdminDashboard /></Page>} />
-            <Route path="/admin/new" element={<Page><AIProductCreator /></Page>} />
+
+            {/* Auth gate */}
+            <Route path="/admin/login" element={<Page><AdminLogin /></Page>} />
+
+            {/* Admin (protected) */}
+            <Route
+              path="/admin"
+              element={
+                <Page>
+                  <ProtectedRoute><AdminDashboard /></ProtectedRoute>
+                </Page>
+              }
+            />
+            <Route
+              path="/admin/new"
+              element={
+                <Page>
+                  <ProtectedRoute><AIProductCreator /></ProtectedRoute>
+                </Page>
+              }
+            />
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AnimatePresence>

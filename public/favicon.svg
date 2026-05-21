@@ -1,11 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#FF8B7A"/>
-      <stop offset="100%" stop-color="#FFB4A2"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#FFD5DC"/>
+      <stop offset="50%" stop-color="#E7D9FF"/>
+      <stop offset="100%" stop-color="#D9ECFF"/>
+    </linearGradient>
+    <linearGradient id="hanger" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFB4A2"/>
+      <stop offset="100%" stop-color="#FF8B7A"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="16" fill="url(#g)"/>
-  <path d="M16 22c4 0 6 4 6 8s2 8 6 8 6-4 6-8 2-8 6-8 6 4 6 8" stroke="white" stroke-width="3" stroke-linecap="round" fill="none"/>
-  <circle cx="32" cy="44" r="3" fill="white"/>
+  <!-- Pastel rounded background -->
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+  <!-- Hanger hook -->
+  <path d="M32 18 C 32 14, 36 14, 36 18"
+        stroke="url(#hanger)" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+  <!-- Heart top -->
+  <path d="M32 22 C 30 19.5, 26.5 20, 26.5 23 C 26.5 25, 32 28, 32 28 C 32 28, 37.5 25, 37.5 23 C 37.5 20, 34 19.5, 32 22 Z"
+        fill="url(#hanger)"/>
+  <!-- Hanger bar -->
+  <path d="M14 42 L 32 30 L 50 42"
+        stroke="url(#hanger)" stroke-width="3.2" fill="none"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="12" y1="44" x2="52" y2="44"
+        stroke="url(#hanger)" stroke-width="3.2" stroke-linecap="round"/>
 </svg>

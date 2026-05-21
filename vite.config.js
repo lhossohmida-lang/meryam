@@ -17,9 +17,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'robots.txt'],
       manifest: {
-        name: 'Walida — وليدة',
-        short_name: 'Walida',
-        description: 'Luxury children\'s clothing — magical storefront & studio dashboard.',
+        name: 'براءة — Baraa Kids',
+        short_name: 'Baraa Kids',
+        description: 'متجركم الإلكتروني لملابس الأطفال الراقية بتقنية 3D.',
         theme_color: '#FFB4A2',
         background_color: '#FFF6F0',
         display: 'standalone',

@@ -23,11 +23,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, Image as ImageIcon, Sparkles, Loader2, ArrowLeft,
-  CheckCircle2, AlertCircle, Wand2, Boxes, X, Box, Plus, Star
+  CheckCircle2, AlertCircle, Wand2, Boxes, X, Box, Plus, Image
 } from 'lucide-react';
 
 import { convertImageTo3D } from '../lib/aiPipeline.js';
-import { saveProduct, recordGenerationJob } from '../firebase.js';
+import { saveProduct, recordGenerationJob, pingFirebase } from '../firebase.js';
 import {
   uploadToCloudinary,
   pingCloudinary,
@@ -82,7 +82,7 @@ function makeAsset(file) {
     id: cryptoId(),
     file,
     preview: URL.createObjectURL(file),
-    is3DSource: false
+    mode: '2d'   // default — admin toggles to '3d' per image
   };
 }
 
@@ -143,65 +143,95 @@ function DropZone({ onFiles, disabled }) {
 }
 
 // ---------------------------------------------------------------------------
-//  Gallery strip — preview each picked file as a thumbnail, with a "set as
-//  3D source" star and a remove button. Exactly one file can be the 3D source
-//  at any time.
+//  Gallery strip — each thumbnail has an independent 2D/3D toggle. Any
+//  number of images can be marked for 3D conversion (or none).
 // ---------------------------------------------------------------------------
-function GalleryStrip({ assets, set3DSource, removeAsset, disabled }) {
+function GalleryStrip({ assets, setMode, removeAsset, disabled }) {
   if (!assets.length) return null;
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-4 grid grid-cols-3 sm:grid-cols-4 gap-3"
+      className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3"
     >
       <AnimatePresence>
-        {assets.map((a, i) => (
-          <motion.div
-            key={a.id}
-            layout
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.35, delay: i * 0.04 }}
-            className={`relative group rounded-2xl overflow-hidden aspect-square border transition-all
-              ${a.is3DSource
-                ? 'border-coral shadow-[0_0_0_2px_rgba(255,139,122,0.4),0_18px_40px_-15px_rgba(255,139,122,0.55)]'
-                : 'border-white/10'}
-            `}
-          >
-            <img src={a.preview} alt="" className="w-full h-full object-cover" />
-
-            {/* 3D source badge */}
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => set3DSource(a.id)}
-              className={`absolute top-1.5 left-1.5 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold
-                ${a.is3DSource
-                  ? 'bg-coral text-white shadow'
-                  : 'bg-black/55 text-white/85 backdrop-blur hover:bg-black/75'}`}
+        {assets.map((a, i) => {
+          const is3D = a.mode === '3d';
+          return (
+            <motion.div
+              key={a.id}
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.35, delay: i * 0.04 }}
+              className={`relative group rounded-2xl overflow-hidden border transition-all
+                ${is3D
+                  ? 'border-coral shadow-[0_0_0_2px_rgba(255,139,122,0.35),0_18px_40px_-15px_rgba(255,139,122,0.5)]'
+                  : 'border-white/10'}`}
             >
-              {a.is3DSource ? <Box size={10} /> : <Star size={10} />}
-              {a.is3DSource ? '3D' : 'اجعلها 3D'}
-            </button>
+              <div className="relative aspect-square">
+                <img src={a.preview} alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0" />
 
-            {/* Remove */}
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => removeAsset(a.id)}
-              className="absolute top-1.5 right-1.5 grid place-items-center w-6 h-6 rounded-full bg-black/55 text-white/90 backdrop-blur hover:bg-black/75"
-              aria-label="remove"
-            >
-              <X size={12} />
-            </button>
+                {/* Remove */}
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => removeAsset(a.id)}
+                  className="absolute top-2 right-2 grid place-items-center w-7 h-7 rounded-full bg-black/55 text-white/90 backdrop-blur hover:bg-black/80"
+                  aria-label="remove"
+                >
+                  <X size={12} />
+                </button>
 
-            <div className="absolute inset-x-0 bottom-0 px-2 py-1 bg-gradient-to-t from-black/70 to-transparent text-[10px] text-white/85 truncate">
-              {a.file.name}
-            </div>
-          </motion.div>
-        ))}
+                <div className="absolute bottom-2 right-2 left-2 text-[10px] text-white/85 truncate">
+                  {a.file.name}
+                </div>
+              </div>
+
+              {/* Per-image mode toggle */}
+              <div className="grid grid-cols-2 gap-0 bg-black/55 backdrop-blur border-t border-white/10">
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => setMode(a.id, '2d')}
+                  className={`relative py-2 text-[11px] font-semibold inline-flex items-center justify-center gap-1.5 transition-colors
+                    ${!is3D ? 'text-white' : 'text-white/45 hover:text-white/75'}`}
+                >
+                  {!is3D && (
+                    <motion.span
+                      layoutId={`mode-bg-${a.id}`}
+                      className="absolute inset-0 bg-gradient-to-br from-baby to-lavender opacity-90"
+                      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                    />
+                  )}
+                  <span className="relative inline-flex items-center gap-1.5">
+                    <Image size={11} /> 2D
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => setMode(a.id, '3d')}
+                  className={`relative py-2 text-[11px] font-semibold inline-flex items-center justify-center gap-1.5 transition-colors
+                    ${is3D ? 'text-white' : 'text-white/45 hover:text-white/75'}`}
+                >
+                  {is3D && (
+                    <motion.span
+                      layoutId={`mode-bg-${a.id}`}
+                      className="absolute inset-0 bg-gradient-to-br from-coral to-peach"
+                      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                    />
+                  )}
+                  <span className="relative inline-flex items-center gap-1.5">
+                    <Box size={11} /> 3D
+                  </span>
+                </button>
+              </div>
+            </motion.div>
+          );
+        })}
       </AnimatePresence>
     </motion.div>
   );
@@ -240,7 +270,71 @@ const STATES = {
 //  Setup banner — shown when Cloudinary isn't configured / reachable. Gives
 //  exact step-by-step setup instructions inline.
 // ---------------------------------------------------------------------------
-function CloudinarySetupBanner({ onRetry, reason }) {
+// ---------------------------------------------------------------------------
+//  Setup banner — Firebase / Firestore not ready.
+// ---------------------------------------------------------------------------
+function FirebaseSetupBanner({ onRetry, reason, errorMessage }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-6 glass-dark border-hairline rounded-3xl p-5 relative overflow-hidden"
+    >
+      <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-gradient-to-br from-sky-400 to-fuchsia-400 opacity-25 blur-3xl" />
+      <div className="flex items-start gap-3 relative">
+        <div className="grid place-items-center w-10 h-10 rounded-2xl bg-sky-400/15 border border-sky-400/30 shrink-0">
+          <AlertCircle size={18} className="text-sky-300" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="text-white font-semibold">
+            {reason === 'auth' ? 'تسجيل الدخول المجهول غير مُفعّل' : 'Firestore غير مُهيّأ بعد'}
+          </h4>
+          {errorMessage && (
+            <p className="mt-2 text-xs text-rose-200 bg-rose-400/10 border border-rose-400/20 rounded-xl px-3 py-2">
+              <span className="opacity-70">رسالة:</span> {errorMessage}
+            </p>
+          )}
+          <p className="text-sm text-white/65 mt-2">
+            مرتين نقر في Firebase Console — وكل شيء يعمل:
+          </p>
+          <ol className="mt-3 grid gap-2 text-sm text-white/75 list-decimal pr-5">
+            <li>
+              <a href="https://console.firebase.google.com/project/mreim-3027a/firestore"
+                 target="_blank" rel="noreferrer"
+                 className="text-peach underline underline-offset-2">
+                Firestore Database
+              </a>{' '}→ <span className="text-white font-semibold">Create database</span> → اختاري الموقع (eur3 أو us-central1) → <span className="text-white font-semibold">Start in production mode</span>.
+            </li>
+            <li>
+              <a href="https://console.firebase.google.com/project/mreim-3027a/authentication/providers"
+                 target="_blank" rel="noreferrer"
+                 className="text-peach underline underline-offset-2">
+                Authentication → Sign-in method
+              </a>{' '}→ Anonymous → <span className="text-white font-semibold">Enable</span>.
+            </li>
+            <li>
+              في{' '}
+              <a href="https://console.firebase.google.com/project/mreim-3027a/firestore/rules"
+                 target="_blank" rel="noreferrer"
+                 className="text-peach underline underline-offset-2">
+                Rules
+              </a>
+              {' '}الصقي محتوى ملف <code className="text-peach">firestore.rules</code> الموجود في جذر المشروع، ثم <span className="text-white font-semibold">Publish</span>.
+            </li>
+          </ol>
+          <button
+            onClick={onRetry}
+            className="btn-pill mt-4 !bg-white/10 !text-white/90 !border-white/15"
+          >
+            <Sparkles size={12} /> أعد الفحص
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function CloudinarySetupBanner({ onRetry, reason, errorMessage }) {
   const cfg = cloudinaryConfig();
   return (
     <motion.div
@@ -259,7 +353,12 @@ function CloudinarySetupBanner({ onRetry, reason }) {
               ? 'Cloudinary غير مُعدّ بعد'
               : 'تعذّر الاتصال بـ Cloudinary'}
           </h4>
-          <p className="text-sm text-white/65 mt-1">
+          {errorMessage && (
+            <p className="mt-2 text-xs text-rose-200 bg-rose-400/10 border border-rose-400/20 rounded-xl px-3 py-2">
+              <span className="opacity-70">رسالة Cloudinary:</span> {errorMessage}
+            </p>
+          )}
+          <p className="text-sm text-white/65 mt-2">
             Cloudinary مجاني (25GB) — الإعداد دقيقتان فقط:
           </p>
           <ol className="mt-3 grid gap-2 text-sm text-white/75 list-decimal pr-5">
@@ -319,45 +418,50 @@ export default function AIProductCreator() {
   const [progress, setProgress] = useState({ percent: 0, label: '' });
   const [error, setError] = useState(null);
   const [savedProductId, setSavedProductId] = useState(null);
-  const [cloudOk, setCloudOk] = useState(null);     // null=checking, true/false after ping
+  const [cloudOk, setCloudOk] = useState(null);
   const [cloudReason, setCloudReason] = useState(null);
+  const [cloudErrorMsg, setCloudErrorMsg] = useState(null);
 
-  // Verify Cloudinary config on mount + on demand.
+  const [fbOk, setFbOk] = useState(null);
+  const [fbReason, setFbReason] = useState(null);
+  const [fbErrorMsg, setFbErrorMsg] = useState(null);
+
+  // Verify Cloudinary + Firebase on mount and on demand.
   async function runHealthCheck() {
     setCloudOk(null);
+    setFbOk(null);
+    setCloudErrorMsg(null);
+    setFbErrorMsg(null);
+
+    // Cloudinary
     if (!isCloudinaryConfigured()) {
       setCloudReason('missing-env');
       setCloudOk(false);
-      return;
+    } else {
+      const c = await pingCloudinary();
+      setCloudReason(c.ok ? null : 'unreachable');
+      setCloudErrorMsg(c.ok ? null : (c.error?.message || null));
+      setCloudOk(c.ok);
     }
-    const res = await pingCloudinary();
-    setCloudReason(res.ok ? null : 'unreachable');
-    setCloudOk(res.ok);
+
+    // Firebase (auth + Firestore)
+    const f = await pingFirebase();
+    setFbReason(f.ok ? null : f.reason);
+    setFbErrorMsg(f.ok ? null : (f.error?.message || null));
+    setFbOk(f.ok);
   }
   useEffect(() => { runHealthCheck(); }, []);
 
-  // Auto-mark the first uploaded file as the 3D source so the admin always
-  // has a sensible default.
   function addFiles(files) {
-    setAssets((prev) => {
-      const incoming = files.map(makeAsset);
-      const next = [...prev, ...incoming];
-      if (!next.some((a) => a.is3DSource) && next.length) next[0].is3DSource = true;
-      return next;
-    });
+    setAssets((prev) => [...prev, ...files.map(makeAsset)]);
   }
 
   function removeAsset(id) {
-    setAssets((prev) => {
-      const next = prev.filter((a) => a.id !== id);
-      // If we just removed the 3D source, promote the first remaining asset.
-      if (next.length && !next.some((a) => a.is3DSource)) next[0].is3DSource = true;
-      return next;
-    });
+    setAssets((prev) => prev.filter((a) => a.id !== id));
   }
 
-  function set3DSource(id) {
-    setAssets((prev) => prev.map((a) => ({ ...a, is3DSource: a.id === id })));
+  function setMode(id, mode) {
+    setAssets((prev) => prev.map((a) => (a.id === id ? { ...a, mode } : a)));
   }
 
   // Clean up object URLs on unmount.
@@ -375,70 +479,95 @@ export default function AIProductCreator() {
 
   async function handleGenerate() {
     if (!assets.length) return setError('الرجاء إضافة صورة واحدة على الأقل.');
-    const source = assets.find((a) => a.is3DSource) ?? assets[0];
     if (!meta.nameAr || !meta.price) return setError('الاسم والسعر مطلوبان.');
 
     setError(null);
-    setState(STATES.GENERATING);
-    setProgress({ percent: 4, label: 'Preparing studio…' });
+    setState(STATES.SAVING);
+    setProgress({ percent: 2, label: 'Preparing studio…' });
 
-    try {
-      // 1) Run the 3D pipeline on the chosen source image (0 → 50%).
-      const { blob, jobId } = await convertImageTo3D(source.file, {
-        onProgress: (p) =>
-          setProgress({ label: p.label, percent: Math.min(p.percent * 0.5, 50) })
+    const jobId = (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2))
+      .replaceAll('-', '');
+    const total = assets.length;
+    // Each image takes one "slot"; 3D-flagged images take an extra slot for
+    // the model conversion + upload. Used to keep the progress bar honest.
+    const slots = total + assets.filter((a) => a.mode === '3d').length;
+    let done = 0;
+    const setStep = (label, frac = 0) =>
+      setProgress({
+        percent: Math.min(2 + ((done + frac) / slots) * 95, 97),
+        label
       });
 
-      // 2) Upload gallery images sequentially to Cloudinary, tracking each
-      //    file's progress (50% → 85%).
-      setState(STATES.SAVING);
+    try {
       const uploads = [];
-      const totalFiles = assets.length;
-      for (let i = 0; i < totalFiles; i++) {
+
+      for (let i = 0; i < total; i++) {
         const a = assets[i];
-        const baseLabel = `جاري رفع الصورة ${i + 1}/${totalFiles}`;
-        setProgress({ percent: 50 + (i / totalFiles) * 35, label: baseLabel });
-        const { url } = await uploadToCloudinary(a.file, {
+        const baseLabel = `الصورة ${i + 1}/${total} · رفع`;
+
+        // a) Upload the photo itself (gallery asset).
+        setStep(baseLabel, 0);
+        const { url: imageUrl } = await uploadToCloudinary(a.file, {
           resourceType: 'image',
           folder: `walida/products/${jobId}`,
           publicId: a.id,
-          onProgress: (filePercent) => {
-            const overall = 50 + ((i + filePercent / 100) / totalFiles) * 35;
-            setProgress({ percent: overall, label: `${baseLabel} · ${Math.round(filePercent)}%` });
-          }
+          onProgress: (p) => setStep(`${baseLabel} · ${Math.round(p)}%`, p / 100)
         });
-        uploads.push({ url, is3DSource: a.is3DSource });
+        done += 1;
+
+        let modelUrl = null;
+
+        // b) If this image is marked '3d', run the AI pipeline + upload .glb.
+        if (a.mode === '3d') {
+          const stage = `الصورة ${i + 1}/${total} · تحويل 3D`;
+          setStep(stage, 0);
+          const { blob, simulated } = await convertImageTo3D(a.file, {
+            onProgress: (p) => setStep(`${stage} · ${Math.round(p.percent)}%`, p.percent / 100 * 0.7)
+          });
+          if (blob && !simulated) {
+            try {
+              setStep(`${stage} · رفع النموذج…`, 0.7);
+              const res = await uploadToCloudinary(blob, {
+                resourceType: 'raw',
+                folder: 'walida/models',
+                publicId: `${a.id}.glb`,
+                onProgress: (p) => setStep(`${stage} · رفع النموذج · ${Math.round(p)}%`, 0.7 + (p / 100) * 0.3)
+              });
+              modelUrl = res.url;
+            } catch (e) {
+              console.warn('[walida] .glb upload skipped:', e.message);
+            }
+          }
+          done += 1;
+        }
+
+        uploads.push({
+          url: imageUrl,
+          mode: a.mode,           // '2d' | '3d'
+          modelUrl                // null for 2D, Cloudinary URL for 3D (when real)
+        });
       }
 
-      // 3) Upload the generated .glb as a raw asset (85% → 95%).
-      setProgress({ percent: 85, label: 'جاري رفع النموذج ثلاثي الأبعاد…' });
-      const { url: modelUrl } = await uploadToCloudinary(blob, {
-        resourceType: 'raw',
-        folder: `walida/models`,
-        publicId: `${jobId}.glb`,
-        onProgress: (p) => setProgress({
-          percent: 85 + (p / 100) * 10,
-          label: `جاري رفع النموذج ثلاثي الأبعاد · ${Math.round(p)}%`
-        })
-      });
+      // Persist the product (97% → 100%).
+      setProgress({ percent: 98, label: 'جاري حفظ المنتج…' });
+      const primaryUrl =
+        uploads.find((u) => u.mode === '3d' && u.modelUrl)?.url ?? uploads[0].url;
+      const productModelUrl = uploads.find((u) => u.modelUrl)?.modelUrl ?? null;
 
-      // 4) Persist the product record in Firestore (95% → 100%).
-      setProgress({ percent: 96, label: 'جاري حفظ المنتج…' });
-      const primaryUrl = uploads.find((u) => u.is3DSource)?.url ?? uploads[0].url;
       const productId = await saveProduct({
         nameAr: meta.nameAr,
         nameEn: meta.nameEn || meta.nameAr,
         price: Number(meta.price),
         category: meta.category || 'general',
-        images: uploads,
-        imageUrl: primaryUrl,
-        modelUrl,
+        images: uploads,           // [{ url, mode, modelUrl }]
+        imageUrl: primaryUrl,      // convenience: primary photo
+        modelUrl: productModelUrl, // convenience: first available .glb
         jobId,
         source: 'ai-pipeline'
       });
 
       await recordGenerationJob(jobId, {
-        productId, status: 'success', images: uploads, modelUrl
+        productId, status: 'success', images: uploads
       });
 
       setSavedProductId(productId);
@@ -452,7 +581,8 @@ export default function AIProductCreator() {
   }
 
   const busy = state === STATES.GENERATING || state === STATES.SAVING;
-  const sourceAsset = assets.find((a) => a.is3DSource);
+  const count2D = assets.filter((a) => a.mode === '2d').length;
+  const count3D = assets.filter((a) => a.mode === '3d').length;
 
   return (
     <div className="min-h-screen bg-graphite bg-admin-aurora text-white">
@@ -472,9 +602,20 @@ export default function AIProductCreator() {
           </span>
         </div>
 
-        {/* Setup banner — only shows when Cloudinary isn't reachable */}
+        {/* Setup banners — only show when a service isn't reachable */}
+        {fbOk === false && (
+          <FirebaseSetupBanner
+            onRetry={runHealthCheck}
+            reason={fbReason}
+            errorMessage={fbErrorMsg}
+          />
+        )}
         {cloudOk === false && (
-          <CloudinarySetupBanner onRetry={runHealthCheck} reason={cloudReason} />
+          <CloudinarySetupBanner
+            onRetry={runHealthCheck}
+            reason={cloudReason}
+            errorMessage={cloudErrorMsg}
+          />
         )}
 
         {/* Two-column workspace */}
@@ -491,24 +632,28 @@ export default function AIProductCreator() {
               )}
             </div>
             <p className="text-xs text-white/50 mb-4">
-              أضيفي صور متعددة (عدسات، زوايا، تفاصيل) — ثم اختاري صورة واحدة كمصدر للنموذج ثلاثي الأبعاد.
+              أضيفي عدة صور — ثم اختاري لكل صورة: تبقى كما هي 2D أم تتحوّل إلى نموذج 3D.
             </p>
 
             <DropZone onFiles={addFiles} disabled={busy} />
 
             <GalleryStrip
               assets={assets}
-              set3DSource={set3DSource}
+              setMode={setMode}
               removeAsset={removeAsset}
               disabled={busy}
             />
 
             {assets.length > 0 && (
-              <div className="mt-4 flex items-center justify-between text-xs text-white/55">
-                <span className="inline-flex items-center gap-1.5">
-                  <Box size={12} className="text-peach" />
-                  مصدر النموذج: {sourceAsset?.file.name ?? '—'}
-                </span>
+              <div className="mt-4 flex items-center justify-between text-xs text-white/55 gap-3 flex-wrap">
+                <div className="inline-flex items-center gap-2">
+                  <span className="chip bg-white/5 border-white/10 text-white/75">
+                    <Image size={11} /> {count2D} صورة 2D
+                  </span>
+                  <span className="chip bg-coral/15 border-coral/30 text-peach">
+                    <Box size={11} /> {count3D} نموذج 3D
+                  </span>
+                </div>
                 {!busy && (
                   <button
                     type="button"
@@ -543,7 +688,7 @@ export default function AIProductCreator() {
                 onChange={(e) => setMeta({ ...meta, nameEn: e.target.value })}
               />
               <Field
-                label="السعر (ريال)"
+                label="السعر (دج)"
                 type="number"
                 placeholder="299"
                 value={meta.price}
@@ -559,13 +704,18 @@ export default function AIProductCreator() {
 
             <button
               onClick={handleGenerate}
-              disabled={busy || !assets.length || cloudOk === false}
+              disabled={busy || !assets.length || cloudOk === false || fbOk === false}
               className="btn-coral w-full mt-6 text-base py-3 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {busy ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
                   {state === STATES.GENERATING ? 'يجري التحويل…' : 'يجري الحفظ…'}
+                </>
+              ) : fbOk === false ? (
+                <>
+                  <AlertCircle size={16} />
+                  أنشئ Firestore أولاً
                 </>
               ) : cloudOk === false ? (
                 <>
@@ -582,16 +732,16 @@ export default function AIProductCreator() {
 
             <ul className="mt-5 grid gap-2 text-xs text-white/55">
               <li className="flex items-center gap-2">
-                <Boxes size={12} className="text-peach" />
-                صور المعرض تُرفع كاملة إلى Firebase Storage
+                <Image size={12} className="text-peach" />
+                الصور المعلَّمة 2D تُرفع كما هي
               </li>
               <li className="flex items-center gap-2">
                 <Box size={12} className="text-peach" />
-                الصورة المختارة فقط تُحوَّل إلى نموذج .glb
+                الصور المعلَّمة 3D تُحوَّل إلى نموذج .glb
               </li>
               <li className="flex items-center gap-2">
                 <Sparkles size={12} className="text-peach" />
-                المنتج يظهر فوراً في صفحة الزبون
+                المنتج يُحفظ في Firestore ويظهر فوراً للزبائن
               </li>
             </ul>
 

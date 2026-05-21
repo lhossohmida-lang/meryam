@@ -1,0 +1,110 @@
+// =============================================================================
+//  WALIDA — Firestore Security Rules
+// -----------------------------------------------------------------------------
+//  Copy this entire file into:
+//    Firebase Console → Firestore Database → Rules → Publish
+//
+//  Collections in use:
+//    • products        — product catalog (public read, admin write)
+//    • orders          — customer orders (auth required either way)
+//    • generationJobs  — internal 2D→3D job tracking (auth required)
+//    • carts           — per-user cart persistence (owner-only)
+//
+//  Security model (intentionally simple — no custom claims yet):
+//    • Anyone (including signed-out visitors) can READ products → so the
+//      storefront works without forcing login.
+//    • Any signed-in user can WRITE products → since the only way to reach
+//      /admin is to type the URL, this is fine for a single-admin shop.
+//      When you add a second user, swap to a custom claim:
+//          allow write: if request.auth.token.admin == true;
+//      and grant it from a Cloud Function or the Admin SDK.
+//    • Orders / carts are scoped to the authenticated user.
+// =============================================================================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------
+    //  PRODUCTS — public catalog (read), real-user writes only
+    // -------------------------------------------------------------------
+    //  IMPORTANT: delete is split from create/update because `request.resource`
+    //  does not exist on a delete, which would make validProduct() crash and
+    //  silently deny the operation.
+    // -------------------------------------------------------------------
+    match /products/{productId} {
+      allow read: if true;
+
+      // Only signed-in NON-anonymous users (admins) can write.
+      allow create, update: if isAdmin() && validProduct();
+      allow delete:         if isAdmin();
+
+      function validProduct() {
+        let d = request.resource.data;
+        return d.nameAr is string && d.nameAr.size() > 0
+            && d.price is number && d.price >= 0
+            && (!('images' in d)   || d.images is list)
+            && (!('modelUrl' in d) || d.modelUrl == null || d.modelUrl is string)
+            && (!('category' in d) || d.category is string);
+      }
+    }
+
+    // -------------------------------------------------------------------
+    //  ORDERS — customer-scoped
+    //    • A customer can create + read their own orders.
+    //    • Admin (any signed-in user, for now) can read every order via
+    //      the admin dashboard.
+    //    • Delete is split — `request.resource` doesn't exist on delete.
+    // -------------------------------------------------------------------
+    match /orders/{orderId} {
+      allow read:   if isSignedIn();
+      allow create: if isSignedIn()
+                    && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------
+    //  CARTS — owner-only
+    // -------------------------------------------------------------------
+    match /carts/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // -------------------------------------------------------------------
+    //  GENERATION JOBS — internal 2D→3D tracking (admin only)
+    // -------------------------------------------------------------------
+    match /generationJobs/{jobId} {
+      allow read, write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------
+    //  Diagnostics — used by pingFirebase() health check.
+    // -------------------------------------------------------------------
+    match /_diagnostics/{doc} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // -------------------------------------------------------------------
+    //  Default deny — every other path is locked down.
+    // -------------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------
+    //  Helpers
+    // -------------------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Real (non-anonymous) user — what the admin login produces.
+    function isAdmin() {
+      return isSignedIn()
+          && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+  }
+}

@@ -11,7 +11,8 @@
 //  feels luxurious.
 // =============================================================================
 
-import React, { Suspense, useRef } from 'react';
+import React, { Suspense, useRef, useState } from 'react';
+import { ErrorBoundary } from '../lib/ErrorBoundary.jsx';
 import { Canvas, useFrame } from '@react-three/fiber';
 import {
   useGLTF,
@@ -93,7 +94,9 @@ function Scene({ modelUrl, tint, hovered }) {
       {/* Subtle HDRI for premium reflections */}
       <Environment preset="studio" />
 
-      {/* The product */}
+      {/* The product — wrapped in an ErrorBoundary so a corrupt / wrong-type
+          GLB silently falls back to the iridescent proxy instead of crashing
+          the whole storefront. */}
       <Suspense fallback={null}>
         <PresentationControls
           global
@@ -103,11 +106,13 @@ function Scene({ modelUrl, tint, hovered }) {
           config={{ mass: 1.2, tension: 220, friction: 22 }}
         >
           <Bounds fit clip observe margin={1.1}>
-            {modelUrl ? (
-              <GLBModel url={modelUrl} hovered={hovered} />
-            ) : (
-              <ProxyShape tint={tint} hovered={hovered} />
-            )}
+            <ErrorBoundary fallback={<ProxyShape tint={tint} hovered={hovered} />}>
+              {modelUrl ? (
+                <GLBModel url={modelUrl} hovered={hovered} />
+              ) : (
+                <ProxyShape tint={tint} hovered={hovered} />
+              )}
+            </ErrorBoundary>
           </Bounds>
         </PresentationControls>
       </Suspense>
@@ -128,10 +133,32 @@ function Scene({ modelUrl, tint, hovered }) {
 // ---------------------------------------------------------------------------
 //  Card wrapper — handles hover float, parallax tilt, and shopping actions.
 // ---------------------------------------------------------------------------
+// Heuristic: detect legacy "fake GLB" URLs from older simulator runs that
+// uploaded JPEG bytes to `/image/upload/` and labelled them .glb. Those will
+// never be parseable, so we skip the 3D attempt entirely.
+function isLikelyValidModel(url) {
+  if (!url) return false;
+  if (url.includes('/image/upload/')) return false;   // legacy JPEG-as-GLB
+  if (url.endsWith('.jpg') || url.endsWith('.jpeg') || url.endsWith('.png')) return false;
+  return true;
+}
+
 export default function ProductCard3D({ product, index = 0, compact = false }) {
   const { add, toggleFavorite, favorites } = useCart() ?? {};
   const isFav = favorites?.includes(product.id);
-  const [hovered, setHovered] = React.useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [modelFailed, setModelFailed] = useState(false);
+
+  // Compute the best photo to show as fallback or as the primary visual.
+  const photoUrl =
+    product.imageUrl
+    || product.images?.find((i) => i?.url)?.url
+    || null;
+
+  // Final decision: render WebGL only if we have a model URL that *looks*
+  // valid AND hasn't already errored out at runtime.
+  const media3DReady = isLikelyValidModel(product.modelUrl) && !modelFailed;
+  const showModel = media3DReady;
 
   // Subtle parallax tilt based on cursor position.
   const mx = useMotionValue(0);
@@ -188,9 +215,11 @@ export default function ProductCard3D({ product, index = 0, compact = false }) {
         <span className="chip absolute top-3 right-3 z-10">{product.category}</span>
       )}
 
-      {/* Top-right badges: gallery count + 3D badge */}
+      {/* Top-right badges: gallery count + 3D badge.
+          The 3D badge hides automatically if the model URL turns out to be
+          invalid (legacy product) — `media3DReady` reflects this. */}
       <div className="absolute bottom-[7.2rem] right-3 z-10 flex flex-col gap-1.5 items-end">
-        {product.modelUrl && (
+        {media3DReady && (
           <span className="chip bg-white/85 text-coral border-white/90 !py-0.5">
             <Box size={11} /> 3D
           </span>
@@ -202,21 +231,69 @@ export default function ProductCard3D({ product, index = 0, compact = false }) {
         )}
       </div>
 
-      {/* 3D canvas */}
-      <div className={`relative ${compact ? 'h-44' : 'h-56'} w-full`}>
-        <Canvas
-          shadows
-          dpr={[1, 2]}
-          camera={{ position: [0, 0.4, 3.4], fov: 35 }}
-          gl={{ antialias: true, alpha: true }}
-          style={{ background: 'transparent' }}
-        >
-          <Scene
-            modelUrl={product.modelUrl}
-            tint={product.tint}
-            hovered={hovered}
+      {/* Hero media. Precedence:
+          1) Valid .glb model → WebGL canvas (rotates, hovers, premium feel)
+          2) Photo (Cloudinary) → smooth-zoom <img>
+          3) Nothing yet → iridescent proxy (still on-brand)
+          If the .glb fails to load (corrupt / wrong type) we automatically
+          fall back to the photo via `setModelFailed(true)`. */}
+      <div className={`relative ${compact ? 'h-44' : 'h-56'} w-full overflow-hidden`}>
+        {showModel ? (
+          <Canvas
+            shadows
+            dpr={[1, 2]}
+            camera={{ position: [0, 0.4, 3.4], fov: 35 }}
+            gl={{ antialias: true, alpha: true }}
+            style={{ background: 'transparent' }}
+          >
+            <ambientLight intensity={0.85} />
+            <directionalLight position={[3, 5, 4]} intensity={1.4} castShadow />
+            <directionalLight position={[-4, 2, -3]} intensity={0.5} color="#E7D9FF" />
+            <Environment preset="studio" />
+            <Suspense fallback={null}>
+              <PresentationControls
+                global
+                rotation={[0, 0, 0]}
+                polar={[-0.15, 0.15]}
+                azimuth={[-0.4, 0.4]}
+                config={{ mass: 1.2, tension: 220, friction: 22 }}
+              >
+                <Bounds fit clip observe margin={1.1}>
+                  <ErrorBoundary
+                    fallback={null}
+                    onError={() => setModelFailed(true)}
+                  >
+                    <GLBModel url={product.modelUrl} hovered={hovered} />
+                  </ErrorBoundary>
+                </Bounds>
+              </PresentationControls>
+            </Suspense>
+            <ContactShadows
+              position={[0, -1.05, 0]} opacity={0.4} scale={6}
+              blur={2.6} far={2} color="#1B1530"
+            />
+          </Canvas>
+        ) : photoUrl ? (
+          <motion.img
+            src={photoUrl}
+            alt={product.nameAr}
+            loading="lazy"
+            initial={{ scale: 1 }}
+            animate={{ scale: hovered ? 1.06 : 1 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute inset-0 w-full h-full object-cover"
           />
-        </Canvas>
+        ) : (
+          <Canvas
+            shadows
+            dpr={[1, 2]}
+            camera={{ position: [0, 0.4, 3.4], fov: 35 }}
+            gl={{ antialias: true, alpha: true }}
+            style={{ background: 'transparent' }}
+          >
+            <Scene modelUrl={null} tint={product.tint} hovered={hovered} />
+          </Canvas>
+        )}
       </div>
 
       {/* Meta */}
@@ -228,7 +305,7 @@ export default function ProductCard3D({ product, index = 0, compact = false }) {
           {product.nameEn}
         </p>
         <p className="mt-2 text-sm font-bold text-coral">
-          {product.price} <span className="text-ink/60 text-xs font-medium">ريال</span>
+          {product.price} <span className="text-ink/60 text-xs font-medium">دج</span>
         </p>
 
         <div className="mt-3 flex flex-col gap-2">

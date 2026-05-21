@@ -1,7 +1,7 @@
 {
-  "name": "Walida — وليدة",
-  "short_name": "Walida",
-  "description": "Luxury children's clothing — magical storefront & studio dashboard.",
+  "name": "براءة — Baraa Kids",
+  "short_name": "Baraa Kids",
+  "description": "متجركم الإلكتروني لملابس الأطفال الراقية بتقنية 3D.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -9,7 +9,7 @@
   "theme_color": "#FFB4A2",
   "lang": "ar",
   "dir": "rtl",
-  "categories": ["shopping", "lifestyle"],
+  "categories": ["shopping", "lifestyle", "kids"],
   "icons": [
     {
       "src": "/icons/icon-192.png",
