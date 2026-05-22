@@ -8,7 +8,7 @@
 //   2. Hero video       → 4-second high-res loop with a soft gradient mask
 //                          that melts into the pastel page background
 //   3. Category strip   → glass pills with stagger reveal
-//   4. 3D product grid  → uses <ProductCard3D/> with framer-motion stagger
+//   4. Product grid     → uses <ProductGridCard/> with framer-motion stagger
 //   5. Bottom nav       → glassmorphism dock (home, grid, heart, cart, user)
 // =============================================================================
 
@@ -21,7 +21,6 @@ import {
   X, Trash2, Box, AlertCircle, RefreshCw
 } from 'lucide-react';
 
-import ProductCard3D from './ProductCard3D.jsx';
 import ProductGridCard from './ProductGridCard.jsx';
 import ProductDetail from './ProductDetail.jsx';
 import { useCart } from '../App.jsx';
@@ -146,14 +145,11 @@ function Hero() {
           transition={{ duration: 0.9, delay: 0.2 }}
           className="absolute bottom-6 right-6 left-6 sm:left-auto sm:max-w-md text-right text-ink drop-shadow-sm"
         >
-          <span className="chip bg-white/70 text-coral border-white/80">
-            <Sparkles size={12} /> تقنية 3D
-          </span>
-          <h1 className="font-arabic mt-3 text-3xl sm:text-4xl font-extrabold leading-tight">
+          <h1 className="font-arabic text-3xl sm:text-4xl font-extrabold leading-tight">
             ملابس الأطفال الراقية
           </h1>
           <p className="mt-2 text-sm font-medium text-ink/80 max-w-xs sm:max-w-none ml-auto">
-            متجركم الإلكتروني لملابس الأطفال الراقية — تصاميم محدودة بتقنية ثلاثية الأبعاد.
+            متجركم الإلكتروني لملابس الأطفال الراقية — تصاميم مختارة بعناية.
           </p>
         </motion.div>
       </div>
@@ -653,11 +649,6 @@ export default function ClientStorefront() {
     () => (active === 'all' ? products : products.filter((p) => p.category === active)),
     [active, products]
   );
-
-  // Pre-warm GLB loader cache for any models we already have.
-  useEffect(() => {
-    products.forEach((p) => ProductCard3D.preload?.(p.modelUrl));
-  }, [products]);
 
   return (
     <div className="min-h-screen pb-32 bg-pearl-sheen">

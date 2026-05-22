@@ -3,28 +3,19 @@
 // -----------------------------------------------------------------------------
 //  Slide-up sheet that opens when a storefront card is tapped. Contains:
 //   • Image gallery — full-bleed carousel with dot indicators
-//   • 3D toggle    — when product has a usable .glb, lets the user spin it
 //   • Zoom overlay — tap any image to pinch / drag zoom (1×–4×)
 //   • Full meta    — name, price, description, category
 //   • Actions      — add to cart, buy now, favourite
 // =============================================================================
 
-import React, { useMemo, useRef, useState } from 'react';
-import { AnimatePresence, motion, useMotionValue, useTransform } from 'framer-motion';
+import React, { useMemo, useState } from 'react';
+import { AnimatePresence, motion, useMotionValue } from 'framer-motion';
 import {
   X, Heart, ShoppingBag, Zap, ChevronLeft, ChevronRight,
-  Box, Image as ImageIcon, ZoomIn, ZoomOut
+  Image as ImageIcon, ZoomIn, ZoomOut
 } from 'lucide-react';
 
 import { useCart } from '../App.jsx';
-import ProductCard3D from './ProductCard3D.jsx';
-
-function hasUsableModel(url) {
-  if (!url) return false;
-  if (url.includes('/image/upload/')) return false;
-  if (/\.(jpe?g|png|webp)$/i.test(url)) return false;
-  return true;
-}
 
 // ---------------------------------------------------------------------------
 //  Zoom overlay — fullscreen image, double-tap or pinch / drag to zoom.
@@ -168,11 +159,9 @@ function Gallery({ images, onZoom }) {
 // ---------------------------------------------------------------------------
 export default function ProductDetail({ product, open, onClose }) {
   const cart = useCart();
-  const [view, setView] = useState('photo'); // 'photo' | '3d'
   const [zoomUrl, setZoomUrl] = useState(null);
 
-  // Reset to photo whenever a different product opens.
-  React.useEffect(() => { setView('photo'); setZoomUrl(null); }, [product?.id]);
+  React.useEffect(() => { setZoomUrl(null); }, [product?.id]);
 
   const images = useMemo(() => {
     if (!product) return [];
@@ -182,7 +171,6 @@ export default function ProductDetail({ product, open, onClose }) {
     return product.imageUrl ? [{ url: product.imageUrl }] : [];
   }, [product]);
 
-  const hasModel = product && hasUsableModel(product.modelUrl);
   const isFav = product && cart?.favorites?.includes(product.id);
 
   return (
@@ -229,51 +217,11 @@ export default function ProductDetail({ product, open, onClose }) {
             {/* Scrollable body */}
             <div className="flex-1 overflow-y-auto">
 
-              {/* Visual area — toggles between gallery and 3D */}
+              {/* Gallery */}
               <div className="px-5">
                 <div className="relative rounded-[24px] overflow-hidden bg-rose/30">
-                  {view === '3d' && hasModel ? (
-                    <div className="aspect-square">
-                      <ProductCard3D product={product} index={0} />
-                    </div>
-                  ) : (
-                    <Gallery images={images} onZoom={setZoomUrl} />
-                  )}
+                  <Gallery images={images} onZoom={setZoomUrl} />
                 </div>
-
-                {/* View toggle */}
-                {hasModel && (
-                  <div className="grid grid-cols-2 gap-1 p-1 mt-4 bg-ink/5 rounded-2xl">
-                    {[
-                      { id: 'photo', label: 'صور',    icon: ImageIcon },
-                      { id: '3d',    label: 'نموذج 3D', icon: Box }
-                    ].map((t) => {
-                      const active = view === t.id;
-                      const Icon = t.icon;
-                      return (
-                        <button
-                          key={t.id}
-                          onClick={() => setView(t.id)}
-                          className={`relative py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors ${
-                            active ? 'text-white' : 'text-ink/55 hover:text-ink'
-                          }`}
-                        >
-                          {active && (
-                            <motion.span
-                              layoutId="detail-tab"
-                              className="absolute inset-0 rounded-xl bg-gradient-to-br from-coral to-peach"
-                              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                            />
-                          )}
-                          <span className="relative inline-flex items-center gap-2">
-                            <Icon size={14} />
-                            {t.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
 
               {/* Info */}
@@ -309,16 +257,10 @@ export default function ProductDetail({ product, open, onClose }) {
                 )}
 
                 {/* Specs strip */}
-                <div className="mt-5 grid grid-cols-3 gap-2">
+                <div className="mt-5 grid grid-cols-2 gap-2">
                   <div className="glass-card !rounded-2xl p-3 text-center">
                     <ImageIcon size={14} className="mx-auto text-coral" />
                     <div className="text-xs text-ink/65 mt-1">{images.length} صور</div>
-                  </div>
-                  <div className="glass-card !rounded-2xl p-3 text-center">
-                    <Box size={14} className="mx-auto text-coral" />
-                    <div className="text-xs text-ink/65 mt-1">
-                      {hasModel ? 'متوفر 3D' : 'صور فقط'}
-                    </div>
                   </div>
                   <div className="glass-card !rounded-2xl p-3 text-center">
                     <Zap size={14} className="mx-auto text-coral" />

@@ -4,22 +4,14 @@
 //  A clean, full-image product card used on the storefront grid. The whole
 //  card is the product photo; meta (name, price, category) sits on a
 //  soft gradient overlay at the bottom. Click → opens the detail sheet
-//  (ProductDetail.jsx) which carries the 3D view, full gallery and zoom.
+//  (ProductDetail.jsx) which carries the full gallery and zoom.
 // =============================================================================
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Heart, Box, Images, ImageOff } from 'lucide-react';
+import { Heart, Images, ImageOff } from 'lucide-react';
 
 import { useCart } from '../App.jsx';
-
-// Heuristic: detect legacy fake-GLB URLs (image bytes labelled .glb).
-function hasUsableModel(url) {
-  if (!url) return false;
-  if (url.includes('/image/upload/')) return false;
-  if (/\.(jpe?g|png|webp)$/i.test(url)) return false;
-  return true;
-}
 
 // Pick the first non-empty image URL from a product, regardless of shape.
 function pickPhoto(product) {
@@ -35,14 +27,13 @@ export default function ProductGridCard({ product, index = 0, onOpen }) {
   const { toggleFavorite, favorites } = useCart() ?? {};
   const isFav = favorites?.includes(product.id);
   const photo = pickPhoto(product);
-  const hasModel = hasUsableModel(product.modelUrl);
   const imageCount = product.images?.length ?? (photo ? 1 : 0);
   const [imgError, setImgError] = useState(false);
 
   // Dev-only: log the product so we can spot bad data shapes immediately.
   if (import.meta.env.DEV && index === 0) {
     // eslint-disable-next-line no-console
-    console.log('[walida] first product →', { id: product.id, photo, hasModel, imageCount, raw: product });
+    console.log('[walida] first product →', { id: product.id, photo, imageCount, raw: product });
   }
 
   return (
@@ -91,19 +82,14 @@ export default function ProductGridCard({ product, index = 0, onOpen }) {
         <Heart size={15} className={isFav ? 'fill-coral text-coral' : 'text-ink/70'} />
       </span>
 
-      {/* Top-right: 3D + image-count badges */}
-      <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end z-10">
-        {hasModel && (
-          <span className="chip bg-white/90 text-coral border-white/95 !py-0.5">
-            <Box size={11} /> 3D
-          </span>
-        )}
-        {imageCount > 1 && (
+      {/* Top-right: image-count badge */}
+      {imageCount > 1 && (
+        <div className="absolute top-3 right-3 z-10">
           <span className="chip bg-white/90 text-ink border-white/95 !py-0.5">
             <Images size={11} /> {imageCount}
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Bottom gradient + meta */}
       <div className="absolute inset-x-0 bottom-0 p-4 pt-14 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-white pointer-events-none">

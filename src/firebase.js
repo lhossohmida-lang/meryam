@@ -202,7 +202,7 @@ function decorateFirebaseError(err) {
 
 /**
  * Persist a product record in Firestore.
- * `product.images[i].url` and `product.modelUrl` should be Cloudinary URLs.
+ * `product.images[i].url` should be Cloudinary URLs.
  * @returns {Promise<string>} new document id
  */
 export async function saveProduct(product) {
