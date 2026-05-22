@@ -5,8 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 // =============================================================================
 //  WALIDA — Vite Configuration
 // -----------------------------------------------------------------------------
-//  Bundles React + Three.js (R3F) and registers the app as an installable PWA.
-//  The PWA manifest is injected at build time so the entire storefront + admin
+//  Bundles React and registers the app as an installable PWA. The PWA
+//  manifest is injected at build time so the entire storefront + admin
 //  can be added to the home screen on iOS / Android and run offline-first.
 // =============================================================================
 
@@ -43,9 +43,9 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // Cache 3D model files, video hero, fonts and Firebase Storage assets
-        // so the storefront keeps feeling premium even on flaky networks.
-        globPatterns: ['**/*.{js,css,html,svg,png,jpg,glb,gltf,woff2,mp4}'],
+        // Cache static assets and Firebase Storage so the storefront keeps
+        // feeling premium even on flaky networks.
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,woff2,mp4}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
@@ -80,9 +80,8 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        // Split the Three.js / R3F bundle so the initial paint stays fast.
+        // Split heavy vendor libs so the initial paint stays fast.
         manualChunks: {
-          three: ['three', '@react-three/fiber', '@react-three/drei'],
           firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
           motion: ['framer-motion']
         }
