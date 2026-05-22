@@ -65,21 +65,33 @@ let _authReady;
 export function ensureAuth() {
   if (_authReady) return _authReady;
   _authReady = new Promise((resolve, reject) => {
+    // Wait for the first onAuthStateChanged emission, which reflects the
+    // fully-restored session from IndexedDB persistence. Only then decide
+    // whether anonymous sign-in is needed. Calling signInAnonymously()
+    // synchronously (when auth.currentUser is transiently null during
+    // SDK initialisation) would overwrite a valid admin session and sign
+    // the admin out on every page reload.
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) { unsub(); resolve(user); }
+      unsub(); // unsubscribe after the first (definitive) emission
+      if (user) {
+        resolve(user);
+      } else {
+        signInAnonymously(auth)
+          .then((cred) => resolve(cred.user))
+          .catch((err) => {
+            if (
+              err?.code === 'auth/admin-restricted-operation' ||
+              err?.code === 'auth/operation-not-allowed'
+            ) {
+              reject(new Error(
+                'فعّل تسجيل الدخول المجهول من Firebase Console → Authentication → Sign-in method → Anonymous.'
+              ));
+            } else {
+              reject(err);
+            }
+          });
+      }
     });
-    if (!auth.currentUser) {
-      signInAnonymously(auth).catch((err) => {
-        unsub();
-        if (err?.code === 'auth/admin-restricted-operation' || err?.code === 'auth/operation-not-allowed') {
-          reject(new Error(
-            'فعّل تسجيل الدخول المجهول من Firebase Console → Authentication → Sign-in method → Anonymous.'
-          ));
-        } else {
-          reject(err);
-        }
-      });
-    }
   });
   return _authReady;
 }

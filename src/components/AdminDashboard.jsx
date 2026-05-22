@@ -564,31 +564,41 @@ export default function AdminDashboard() {
 
   // Live products → full list + the count of ones with a usable .glb model.
   useEffect(() => {
+    let unsub;
     try {
       const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
-      const unsub = onSnapshot(q, (snap) => {
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setProducts(list);
-        setModelsCount(
-          list.filter((p) => p.modelUrl && !p.modelUrl.includes('/image/upload/')).length
-        );
-      });
-      return unsub;
+      unsub = onSnapshot(
+        q,
+        (snap) => {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          setProducts(list);
+          setModelsCount(
+            list.filter((p) => p.modelUrl && !p.modelUrl.includes('/image/upload/')).length
+          );
+        },
+        (err) => console.warn('products subscription error', err)
+      );
     } catch (e) { console.warn('products subscription unavailable', e); }
+    return () => unsub?.();
   }, []);
 
   // Live orders → recent list + count + revenue.
   useEffect(() => {
+    let unsub;
     try {
       const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(8));
-      const unsub = onSnapshot(q, (snap) => {
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setOrders(list);
-        setOrderCount(snap.size);
-        setRevenue(list.reduce((sum, o) => sum + (Number(o.total) || 0), 0));
-      });
-      return unsub;
+      unsub = onSnapshot(
+        q,
+        (snap) => {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          setOrders(list);
+          setOrderCount(snap.size);
+          setRevenue(list.reduce((sum, o) => sum + (Number(o.total) || 0), 0));
+        },
+        (err) => console.warn('orders subscription error', err)
+      );
     } catch (e) { console.warn('orders subscription unavailable', e); }
+    return () => unsub?.();
   }, []);
 
   const kpiValues = {
