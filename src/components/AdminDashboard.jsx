@@ -23,6 +23,7 @@ import {
 
 import { db, adminSignOut, deleteProduct, updateProduct } from '../firebase.js';
 import { useAdminUser } from './ProtectedRoute.jsx';
+import { PRODUCT_CATEGORIES } from './ClientStorefront.jsx';
 import {
   collection, onSnapshot, query, orderBy, limit
 } from 'firebase/firestore';
@@ -204,11 +205,18 @@ function OrdersPanel({ orders }) {
 //  stays in AIProductCreator (re-upload + re-publish for visual changes).
 // ---------------------------------------------------------------------------
 function EditProductModal({ product, onClose, onSave }) {
+  // If the product was created with a legacy / free-text category that
+  // doesn't map to a storefront chip, fall back to the first valid option
+  // so the dropdown is never out-of-sync with its underlying value.
+  const knownCategory = PRODUCT_CATEGORIES.some((c) => c.id === product?.category)
+    ? product.category
+    : PRODUCT_CATEGORIES[0].id;
+
   const [meta, setMeta] = useState({
     nameAr:   product?.nameAr   ?? '',
     nameEn:   product?.nameEn   ?? '',
     price:    product?.price    ?? '',
-    category: product?.category ?? ''
+    category: knownCategory
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -290,9 +298,8 @@ function EditProductModal({ product, onClose, onSave }) {
           <FormField label="السعر (دج)" type="number" value={meta.price}
                      onChange={(v) => setMeta({ ...meta, price: v })}
                      placeholder="2900" />
-          <FormField label="الفئة" value={meta.category}
-                     onChange={(v) => setMeta({ ...meta, category: v })}
-                     placeholder="dresses · sets · knits" />
+          <CategoryField value={meta.category}
+                         onChange={(v) => setMeta({ ...meta, category: v })} />
         </div>
 
         <AnimatePresence>
@@ -342,6 +349,29 @@ function FormField({ label, value, onChange, ...input }) {
                    text-white placeholder:text-white/30 outline-none
                    focus:border-coral focus:bg-white/[0.09] transition"
       />
+    </label>
+  );
+}
+
+// Category picker — bound to the same list shown on the customer storefront,
+// so the admin can never type a value that wouldn't match a real filter chip.
+function CategoryField({ value, onChange }) {
+  return (
+    <label className="block">
+      <span className="text-xs uppercase tracking-[0.2em] text-white/55">الفئة</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-2 w-full bg-white/[0.06] border border-white/10 rounded-2xl px-4 py-3
+                   text-white outline-none appearance-none
+                   focus:border-coral focus:bg-white/[0.09] transition"
+      >
+        {PRODUCT_CATEGORIES.map((c) => (
+          <option key={c.id} value={c.id} className="bg-graphite text-white">
+            {c.ar} · {c.en}
+          </option>
+        ))}
+      </select>
     </label>
   );
 }

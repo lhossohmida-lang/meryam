@@ -28,14 +28,19 @@ import { db } from '../firebase.js';
 
 // ---------------------------------------------------------------------------
 //  Categories — the visual filter chips. Products' `category` field maps here.
+//  Exported so the admin (edit + create) can reuse the same source of truth.
 // ---------------------------------------------------------------------------
-const CATEGORIES = [
+export const CATEGORIES = [
   { id: 'all',     ar: 'الكل',       en: 'All' },
   { id: 'dresses', ar: 'فساتين',     en: 'Dresses' },
   { id: 'sets',    ar: 'أطقم',       en: 'Sets' },
   { id: 'knits',   ar: 'تريكو',      en: 'Knits' },
   { id: 'shoes',   ar: 'أحذية',      en: 'Shoes' }
 ];
+
+// Subset shown to the admin — excludes the synthetic "all" filter chip,
+// since a product is always assigned to exactly one real category.
+export const PRODUCT_CATEGORIES = CATEGORIES.filter((c) => c.id !== 'all');
 
 // Hero — editorial children's-wear photography matching the Baraa Kids
 // brand identity (pastel clothing on hangers, soft gradient background).
@@ -297,31 +302,17 @@ function ProductGrid({ products, loading, error, onRetry, onOpen }) {
   if (error)              return <ErrorState message={error} onRetry={onRetry} />;
   if (loading)            return <SkeletonGrid />;
   if (!products.length)   return <EmptyState />;
+  // Plain <section> + per-card animation. Stacking variants on the section
+  // with `AnimatePresence mode="popLayout"` + `layout` on the wrapper used
+  // to leave cards stuck at opacity:0 on first paint (the parent variant
+  // never propagated through the layout-tracked wrapper). The card already
+  // animates itself in, so this stays simple and reliable.
   return (
-    <motion.section
-      initial="hidden"
-      animate="show"
-      variants={{
-        hidden: {},
-        show:   { transition: { staggerChildren: 0.08, delayChildren: 0.2 } }
-      }}
-      className="mt-6 px-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pb-32"
-    >
-      <AnimatePresence mode="popLayout">
-        {products.map((p, i) => (
-          <motion.div
-            key={p.id}
-            layout
-            variants={{
-              hidden: { opacity: 0, y: 40 },
-              show:   { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } }
-            }}
-          >
-            <ProductGridCard product={p} index={i} onOpen={onOpen} />
-          </motion.div>
-        ))}
-      </AnimatePresence>
-    </motion.section>
+    <section className="mt-6 px-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pb-32">
+      {products.map((p, i) => (
+        <ProductGridCard key={p.id} product={p} index={i} onOpen={onOpen} />
+      ))}
+    </section>
   );
 }
 

@@ -30,6 +30,7 @@ import {
   isCloudinaryConfigured,
   cloudinaryConfig
 } from '../lib/cloudinary.js';
+import { PRODUCT_CATEGORIES } from './ClientStorefront.jsx';
 
 // ---------------------------------------------------------------------------
 //  Glowing loading spinner
@@ -350,7 +351,10 @@ function CloudinarySetupBanner({ onRetry, reason, errorMessage }) {
 export default function AIProductCreator() {
   const navigate = useNavigate();
   const [assets, setAssets] = useState([]);
-  const [meta, setMeta] = useState({ nameAr: '', nameEn: '', price: '', category: '' });
+  const [meta, setMeta] = useState({
+    nameAr: '', nameEn: '', price: '',
+    category: PRODUCT_CATEGORIES[0].id
+  });
   const [state, setState] = useState(STATES.IDLE);
   const [progress, setProgress] = useState({ percent: 0, label: '' });
   const [error, setError] = useState(null);
@@ -399,7 +403,7 @@ export default function AIProductCreator() {
   function reset() {
     assets.forEach((a) => URL.revokeObjectURL(a.preview));
     setAssets([]);
-    setMeta({ nameAr: '', nameEn: '', price: '', category: '' });
+    setMeta({ nameAr: '', nameEn: '', price: '', category: PRODUCT_CATEGORIES[0].id });
     setProgress({ percent: 0, label: '' });
     setError(null);
     setSavedProductId(null);
@@ -562,12 +566,22 @@ export default function AIProductCreator() {
                 value={meta.price}
                 onChange={(e) => setMeta({ ...meta, price: e.target.value })}
               />
-              <Field
-                label="الفئة"
-                placeholder="dresses · sets · knits"
-                value={meta.category}
-                onChange={(e) => setMeta({ ...meta, category: e.target.value })}
-              />
+              <label className="block">
+                <span className="text-xs uppercase tracking-[0.2em] text-white/55">الفئة</span>
+                <select
+                  value={meta.category}
+                  onChange={(e) => setMeta({ ...meta, category: e.target.value })}
+                  className="mt-2 w-full bg-white/[0.06] border border-white/10 rounded-2xl px-4 py-3
+                             text-white outline-none appearance-none
+                             focus:border-coral focus:bg-white/[0.09] transition"
+                >
+                  {PRODUCT_CATEGORIES.map((c) => (
+                    <option key={c.id} value={c.id} className="bg-graphite text-white">
+                      {c.ar} · {c.en}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             <button
