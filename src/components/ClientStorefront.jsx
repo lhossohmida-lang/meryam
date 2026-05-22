@@ -23,6 +23,7 @@ import {
 
 import ProductGridCard from './ProductGridCard.jsx';
 import ProductDetail from './ProductDetail.jsx';
+import AIChatWidget from './AIChatWidget.jsx';
 import { useCart } from '../App.jsx';
 import { db } from '../firebase.js';
 
@@ -668,6 +669,10 @@ export default function ClientStorefront() {
         open={!!openProduct}
         onClose={() => setOpenProduct(null)}
       />
+
+      {/* Gemini-powered storefront concierge (hides itself if the API
+          key isn't configured — safe for fresh installs / forks). */}
+      <AIChatWidget />
     </div>
   );
 }

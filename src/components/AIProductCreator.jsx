@@ -31,6 +31,7 @@ import {
   cloudinaryConfig
 } from '../lib/cloudinary.js';
 import { PRODUCT_CATEGORIES } from './ClientStorefront.jsx';
+import { generateProductContent, isGeminiConfigured } from '../lib/gemini.js';
 
 // ---------------------------------------------------------------------------
 //  Glowing loading spinner
@@ -367,6 +368,34 @@ export default function AIProductCreator() {
   const [fbReason, setFbReason] = useState(null);
   const [fbErrorMsg, setFbErrorMsg] = useState(null);
 
+  // ✨ Gemini-powered keyword → name/description auto-fill.
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiKeywords, setAiKeywords] = useState('');
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState(null);
+
+  async function handleAiGenerate(e) {
+    e?.preventDefault?.();
+    const kw = aiKeywords.trim();
+    if (!kw || aiBusy) return;
+    setAiError(null);
+    setAiBusy(true);
+    try {
+      const out = await generateProductContent(kw);
+      setMeta((prev) => ({
+        ...prev,
+        nameAr: out.nameAr || prev.nameAr,
+        nameEn: out.nameEn || prev.nameEn
+      }));
+      setAiOpen(false);
+      setAiKeywords('');
+    } catch (err) {
+      setAiError(err?.message || 'فشل التوليد. حاولي بكلمات أخرى.');
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
   async function runHealthCheck() {
     setCloudOk(null);
     setFbOk(null);
@@ -545,6 +574,76 @@ export default function AIProductCreator() {
             <p className="text-xs text-white/50 mb-4">
               ستظهر مباشرة على الواجهة الأمامية بعد المعالجة.
             </p>
+
+            {/* ✨ AI auto-fill — surface only when the Gemini key is set. */}
+            {isGeminiConfigured() && (
+              <div className="mb-4">
+                {!aiOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => { setAiOpen(true); setAiError(null); }}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl text-xs font-semibold text-white
+                               bg-gradient-to-br from-coral to-peach hover:opacity-90 transition shadow-glow"
+                  >
+                    <Wand2 size={13} />
+                    ✨ توليد الاسم بـ AI
+                  </button>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                    className="rounded-2xl bg-white/[0.06] border border-white/10 p-3"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles size={13} className="text-peach" />
+                      <span className="text-xs text-white/70">اكتبي كلمات مفتاحية ثم اضغطي توليد</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={aiKeywords}
+                        onChange={(e) => setAiKeywords(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') { e.preventDefault(); handleAiGenerate(e); }
+                        }}
+                        autoFocus
+                        placeholder="فستان زهري قطن صيفي…"
+                        disabled={aiBusy}
+                        className="flex-1 bg-white/[0.06] border border-white/10 rounded-xl px-3 py-2
+                                   text-sm text-white placeholder:text-white/30 outline-none
+                                   focus:border-coral focus:bg-white/[0.09] transition disabled:opacity-60"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAiGenerate}
+                        disabled={aiBusy || !aiKeywords.trim()}
+                        className="grid place-items-center px-3 h-10 rounded-xl text-white text-xs font-semibold
+                                   bg-gradient-to-br from-coral to-peach disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                      >
+                        {aiBusy ? <Loader2 size={14} className="animate-spin" /> : <>
+                          <Wand2 size={13} className="ml-1" />
+                          توليد
+                        </>}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setAiOpen(false); setAiError(null); setAiKeywords(''); }}
+                        disabled={aiBusy}
+                        className="grid place-items-center w-9 h-10 rounded-xl bg-white/5 text-white/70 hover:text-white shrink-0"
+                        aria-label="إلغاء"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                    {aiError && (
+                      <div className="mt-2 flex items-start gap-2 p-2 rounded-xl bg-rose-400/10 border border-rose-400/30 text-rose-200 text-xs">
+                        <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                        <span>{aiError}</span>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <Field
