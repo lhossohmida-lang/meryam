@@ -34,6 +34,8 @@ import {
   updateDoc,
   query,
   limit,
+  orderBy,
+  onSnapshot,
   serverTimestamp
 } from 'firebase/firestore';
 import { getAnalytics, isSupported as analyticsSupported } from 'firebase/analytics';
@@ -266,6 +268,68 @@ export async function updateProduct(productId, updates) {
 }
 
 /** Track a 2D→3D generation job (useful for retry / analytics). */
+/**
+ * Append one customer-chat message to Firestore.
+ *
+ * Fire-and-forget: if Firestore is unreachable or rules reject the write
+ * we log and move on so the chat UX never breaks. The admin's AI assistant
+ * later reads the same collection to ground its answers in what real
+ * customers are actually asking.
+ *
+ * Document shape:
+ *   { sessionId, role: 'user' | 'model', text, createdAt }
+ *
+ * Firestore-rules note: this writes from anonymous browser sessions, so
+ * `chatMessages` needs `allow create: if true` (or similar) in rules.
+ * Reads should remain admin-only since messages can contain PII.
+ */
+export async function saveChatMessage(sessionId, role, text) {
+  try {
+    await ensureAuth();
+    await addDoc(collection(db, 'chatMessages'), {
+      sessionId: String(sessionId || 'anon'),
+      role,
+      text: String(text ?? '').slice(0, 4000),
+      createdAt: serverTimestamp()
+    });
+  } catch (err) {
+    console.warn('[walida] saveChatMessage skipped:', err.message);
+  }
+}
+
+/**
+ * Live subscription to the most recent `maxMessages` chat messages, oldest
+ * first (so the admin AI sees them in conversational order). Returns the
+ * unsubscribe function so the caller can clean up on unmount.
+ */
+export function subscribeToRecentChatMessages(callback, maxMessages = 50) {
+  try {
+    const q = query(
+      collection(db, 'chatMessages'),
+      orderBy('createdAt', 'desc'),
+      limit(maxMessages)
+    );
+    return onSnapshot(
+      q,
+      (snap) => {
+        // Firestore returned newest-first; reverse so the prompt reads
+        // chronologically (older → newer).
+        const list = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .reverse();
+        callback(list);
+      },
+      (err) => {
+        console.warn('[walida] chatMessages subscription error', err);
+        callback([]);
+      }
+    );
+  } catch (e) {
+    console.warn('[walida] chatMessages subscription init failed', e);
+    return () => {};
+  }
+}
+
 export async function recordGenerationJob(jobId, payload) {
   try {
     await ensureAuth();

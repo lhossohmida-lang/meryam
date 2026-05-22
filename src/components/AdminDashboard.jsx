@@ -22,7 +22,10 @@ import {
   Wand2
 } from 'lucide-react';
 
-import { db, adminSignOut, deleteProduct, updateProduct } from '../firebase.js';
+import {
+  db, adminSignOut, deleteProduct, updateProduct,
+  subscribeToRecentChatMessages
+} from '../firebase.js';
 import { useAdminUser } from './ProtectedRoute.jsx';
 import { PRODUCT_CATEGORIES } from './ClientStorefront.jsx';
 import { generateProductContent, isGeminiConfigured } from '../lib/gemini.js';
@@ -42,9 +45,9 @@ function Sidebar() {
     { id: 'ai',      label: 'AI Studio', icon: Sparkles }
   ];
   return (
-    <aside className="hidden lg:flex flex-col w-60 p-6 gap-2 glass-dark rounded-3xl">
+    <aside className="hidden lg:flex flex-col w-60 p-6 gap-2 glass-strong rounded-3xl">
       <div className="mb-6">
-        <div className="font-arabic text-2xl font-extrabold text-white">براءة</div>
+        <div className="font-arabic text-2xl font-extrabold text-ink">براءة</div>
         <div className="text-shimmer text-[10px] tracking-[0.45em] font-semibold">BARAA KIDS</div>
       </div>
       {items.map(({ id, label, icon: Icon, active }) => (
@@ -52,8 +55,8 @@ function Sidebar() {
           key={id}
           className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-medium transition-colors ${
             active
-              ? 'bg-white/10 text-white border border-white/10'
-              : 'text-white/60 hover:text-white hover:bg-white/5'
+              ? 'bg-coral/15 text-coral border border-coral/25'
+              : 'text-ink/60 hover:text-ink hover:bg-ink/5'
           }`}
         >
           <Icon size={16} />
@@ -82,16 +85,16 @@ function Topbar() {
 
   return (
     <div className="flex items-center gap-3 mb-6">
-      <div className="glass-dark flex items-center gap-2 px-4 py-2.5 rounded-2xl flex-1">
-        <Search size={14} className="text-white/50" />
+      <div className="glass-strong flex items-center gap-2 px-4 py-2.5 rounded-2xl flex-1">
+        <Search size={14} className="text-ink/50" />
         <input
-          className="bg-transparent outline-none text-sm text-white placeholder:text-white/40 flex-1"
+          className="bg-transparent outline-none text-sm text-ink placeholder:text-ink/40 flex-1"
           placeholder="بحث…"
         />
       </div>
 
       {/* Signed-in user chip */}
-      <div className="hidden sm:flex glass-dark items-center gap-2.5 pl-3 pr-4 py-2 rounded-2xl text-white/80">
+      <div className="hidden sm:flex glass-strong items-center gap-2.5 pl-3 pr-4 py-2 rounded-2xl text-ink/80">
         <div className="grid place-items-center w-7 h-7 rounded-xl bg-gradient-to-br from-coral to-peach text-white text-[10px] font-bold">
           {(user?.displayName || user?.email || '?').slice(0, 1).toUpperCase()}
         </div>
@@ -102,7 +105,7 @@ function Topbar() {
 
       <button
         onClick={handleSignOut}
-        className="glass-dark w-11 h-11 grid place-items-center rounded-2xl text-white/70 hover:text-rose-300"
+        className="glass-strong w-11 h-11 grid place-items-center rounded-2xl text-ink/70 hover:text-rose-600"
         title="تسجيل الخروج"
       >
         <LogOut size={16} />
@@ -122,24 +125,24 @@ function KpiCard({ kpi, value, i }) {
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.06 * i, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className="glass-dark rounded-3xl p-5 relative overflow-hidden border-hairline"
+      className="glass-strong rounded-3xl p-5 relative overflow-hidden border-hairline"
     >
       <div
         aria-hidden
         className={`absolute -top-10 -right-10 w-40 h-40 rounded-full bg-gradient-to-br ${kpi.accent} opacity-25 blur-3xl`}
       />
       <div className="flex items-center justify-between">
-        <div className="grid place-items-center w-10 h-10 rounded-2xl bg-white/5 border border-white/10 text-white/80">
+        <div className="grid place-items-center w-10 h-10 rounded-2xl bg-ink/5 border border-ink/10 text-ink/80">
           <Icon size={16} />
         </div>
         {!isEmpty && (
-          <span className="chip bg-white/5 border-white/10 text-emerald-300">
+          <span className="chip bg-emerald-100 border-emerald-200 text-emerald-700">
             <ArrowUpRight size={12} /> live
           </span>
         )}
       </div>
-      <div className="mt-6 text-xs uppercase tracking-[0.2em] text-white/50">{kpi.label}</div>
-      <div className="mt-1 text-3xl font-bold text-white">
+      <div className="mt-6 text-xs uppercase tracking-[0.2em] text-ink/50">{kpi.label}</div>
+      <div className="mt-1 text-3xl font-bold text-ink">
         {isEmpty ? '—' : (kpi.format ? kpi.format(value) : value)}
       </div>
     </motion.div>
@@ -151,29 +154,29 @@ function KpiCard({ kpi, value, i }) {
 // ---------------------------------------------------------------------------
 function OrdersPanel({ orders }) {
   return (
-    <div className="glass-dark rounded-3xl p-5 border-hairline">
+    <div className="glass-strong rounded-3xl p-5 border-hairline">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-white font-semibold">آخر الطلبات</h3>
-          <p className="text-xs text-white/50">Recent orders queue</p>
+          <h3 className="text-ink font-semibold">آخر الطلبات</h3>
+          <p className="text-xs text-ink/50">Recent orders queue</p>
         </div>
         {orders.length > 0 && (
-          <button className="chip bg-white/5 text-white/70 border-white/10">عرض الكل</button>
+          <button className="chip bg-ink/5 text-ink/70 border-ink/10">عرض الكل</button>
         )}
       </div>
 
       {orders.length === 0 ? (
         <div className="py-12 grid place-items-center text-center">
-          <div className="grid place-items-center w-14 h-14 rounded-3xl bg-white/5 border border-white/10 mb-4">
-            <Inbox size={20} className="text-white/60" />
+          <div className="grid place-items-center w-14 h-14 rounded-3xl bg-ink/5 border border-ink/10 mb-4">
+            <Inbox size={20} className="text-ink/60" />
           </div>
-          <p className="text-white/70 font-medium">لا توجد طلبات بعد</p>
-          <p className="text-white/40 text-xs mt-1 max-w-xs">
+          <p className="text-ink/70 font-medium">لا توجد طلبات بعد</p>
+          <p className="text-ink/40 text-xs mt-1 max-w-xs">
             بمجرد أن يطلب الزبون منتجاً، سيظهر هنا في الوقت الحقيقي.
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-white/5">
+        <div className="divide-y divide-ink/5">
           {orders.map((o, i) => (
             <motion.div
               key={o.id}
@@ -187,13 +190,13 @@ function OrdersPanel({ orders }) {
                   {(o.customer ?? '?').split(' ').map((s) => s[0]).slice(0, 2).join('')}
                 </div>
                 <div className="text-sm">
-                  <div className="text-white font-medium">{o.customer ?? 'Guest'}</div>
-                  <div className="text-white/40 text-xs">{o.id}</div>
+                  <div className="text-ink font-medium">{o.customer ?? 'Guest'}</div>
+                  <div className="text-ink/40 text-xs">{o.id}</div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-white font-semibold">{o.total ?? 0} دج</div>
-                <div className="text-white/40 text-xs">{o.items ?? 0} عناصر</div>
+                <div className="text-ink font-semibold">{o.total ?? 0} دج</div>
+                <div className="text-ink/40 text-xs">{o.items ?? 0} عناصر</div>
               </div>
             </motion.div>
           ))}
@@ -297,26 +300,26 @@ function EditProductModal({ product, onClose, onSave }) {
         onSubmit={handleSave}
         initial={{ scale: 0.92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96 }}
         onClick={(e) => e.stopPropagation()}
-        className="glass-dark border-hairline rounded-[28px] p-6 w-[min(540px,94vw)]"
+        className="glass-strong border-hairline rounded-[28px] p-6 w-[min(540px,94vw)]"
       >
         <div className="flex items-center gap-4 mb-5">
-          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/5 border border-white/10 shrink-0">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-ink/5 border border-ink/10 shrink-0">
             {photo ? (
               <img src={photo} alt="" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full grid place-items-center text-white/30">
+              <div className="w-full h-full grid place-items-center text-ink/30">
                 <ImageIcon size={18} />
               </div>
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-white font-semibold">تعديل المنتج</h3>
-            <p className="text-xs text-white/50 truncate">{product?.nameAr}</p>
+            <h3 className="text-ink font-semibold">تعديل المنتج</h3>
+            <p className="text-xs text-ink/50 truncate">{product?.nameAr}</p>
           </div>
           <button
             type="button"
             onClick={() => !saving && onClose()}
-            className="grid place-items-center w-9 h-9 rounded-full bg-white/5 text-white/65 hover:text-white"
+            className="grid place-items-center w-9 h-9 rounded-full bg-ink/5 text-ink/65 hover:text-ink"
             aria-label="إغلاق"
           >
             <X size={14} />
@@ -339,11 +342,11 @@ function EditProductModal({ product, onClose, onSave }) {
             ) : (
               <motion.div
                 initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-                className="rounded-2xl bg-white/[0.06] border border-white/10 p-3"
+                className="rounded-2xl bg-white/70 border border-ink/10 p-3"
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles size={13} className="text-peach" />
-                  <span className="text-xs text-white/70">اكتبي كلمات مفتاحية ثم اضغطي توليد</span>
+                  <span className="text-xs text-ink/70">اكتبي كلمات مفتاحية ثم اضغطي توليد</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -356,9 +359,9 @@ function EditProductModal({ product, onClose, onSave }) {
                     autoFocus
                     placeholder="فستان زهري قطن صيفي…"
                     disabled={aiBusy}
-                    className="flex-1 bg-white/[0.06] border border-white/10 rounded-xl px-3 py-2
-                               text-sm text-white placeholder:text-white/30 outline-none
-                               focus:border-coral focus:bg-white/[0.09] transition disabled:opacity-60"
+                    className="flex-1 bg-white/70 border border-ink/10 rounded-xl px-3 py-2
+                               text-sm text-ink placeholder:text-ink/30 outline-none
+                               focus:border-coral focus:bg-white/90 transition disabled:opacity-60"
                   />
                   <button
                     type="button"
@@ -376,14 +379,14 @@ function EditProductModal({ product, onClose, onSave }) {
                     type="button"
                     onClick={() => { setAiOpen(false); setAiError(null); setAiKeywords(''); }}
                     disabled={aiBusy}
-                    className="grid place-items-center w-9 h-10 rounded-xl bg-white/5 text-white/70 hover:text-white shrink-0"
+                    className="grid place-items-center w-9 h-10 rounded-xl bg-ink/5 text-ink/70 hover:text-ink shrink-0"
                     aria-label="إلغاء"
                   >
                     <X size={13} />
                   </button>
                 </div>
                 {aiError && (
-                  <div className="mt-2 flex items-start gap-2 p-2 rounded-xl bg-rose-400/10 border border-rose-400/30 text-rose-200 text-xs">
+                  <div className="mt-2 flex items-start gap-2 p-2 rounded-xl bg-rose-400/10 border border-rose-400/30 text-rose-700 text-xs">
                     <AlertCircle size={12} className="mt-0.5 shrink-0" />
                     <span>{aiError}</span>
                   </div>
@@ -411,7 +414,7 @@ function EditProductModal({ product, onClose, onSave }) {
           {error && (
             <motion.div
               initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="mt-4 flex items-start gap-2 p-3 rounded-2xl bg-rose-400/10 border border-rose-400/30 text-rose-200 text-sm"
+              className="mt-4 flex items-start gap-2 p-3 rounded-2xl bg-rose-400/10 border border-rose-400/30 text-rose-700 text-sm"
             >
               <AlertCircle size={14} className="mt-0.5 shrink-0" />
               <span>{error}</span>
@@ -424,7 +427,7 @@ function EditProductModal({ product, onClose, onSave }) {
             type="button"
             disabled={saving}
             onClick={onClose}
-            className="btn-pill !bg-white/10 !text-white/80 !border-white/10 disabled:opacity-60"
+            className="btn-pill !bg-ink/10 !text-ink/80 !border-ink/10 disabled:opacity-60"
           >
             إلغاء
           </button>
@@ -445,14 +448,14 @@ function EditProductModal({ product, onClose, onSave }) {
 function FormField({ label, value, onChange, ...input }) {
   return (
     <label className="block">
-      <span className="text-xs uppercase tracking-[0.2em] text-white/55">{label}</span>
+      <span className="text-xs uppercase tracking-[0.2em] text-ink/55">{label}</span>
       <input
         {...input}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-2 w-full bg-white/[0.06] border border-white/10 rounded-2xl px-4 py-3
-                   text-white placeholder:text-white/30 outline-none
-                   focus:border-coral focus:bg-white/[0.09] transition"
+        className="mt-2 w-full bg-white/70 border border-ink/10 rounded-2xl px-4 py-3
+                   text-ink placeholder:text-ink/30 outline-none
+                   focus:border-coral focus:bg-white/90 transition"
       />
     </label>
   );
@@ -463,16 +466,16 @@ function FormField({ label, value, onChange, ...input }) {
 function CategoryField({ value, onChange }) {
   return (
     <label className="block">
-      <span className="text-xs uppercase tracking-[0.2em] text-white/55">الفئة</span>
+      <span className="text-xs uppercase tracking-[0.2em] text-ink/55">الفئة</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-2 w-full bg-white/[0.06] border border-white/10 rounded-2xl px-4 py-3
-                   text-white outline-none appearance-none
-                   focus:border-coral focus:bg-white/[0.09] transition"
+        className="mt-2 w-full bg-white/70 border border-ink/10 rounded-2xl px-4 py-3
+                   text-ink outline-none appearance-none
+                   focus:border-coral focus:bg-white/90 transition"
       >
         {PRODUCT_CATEGORIES.map((c) => (
-          <option key={c.id} value={c.id} className="bg-graphite text-white">
+          <option key={c.id} value={c.id} className="bg-white text-ink">
             {c.ar} · {c.en}
           </option>
         ))}
@@ -505,26 +508,26 @@ function ProductsPanel({ products, onDelete, onUpdate }) {
   }
 
   return (
-    <div className="glass-dark rounded-3xl p-5 border-hairline">
+    <div className="glass-strong rounded-3xl p-5 border-hairline">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-white font-semibold">المنتجات</h3>
-          <p className="text-xs text-white/50">
+          <h3 className="text-ink font-semibold">المنتجات</h3>
+          <p className="text-xs text-ink/50">
             {products.length} {products.length === 1 ? 'منتج' : 'منتجات'}
           </p>
         </div>
-        <Link to="/admin/new" className="btn-pill !bg-white/10 !text-white/90 !border-white/15">
+        <Link to="/admin/new" className="btn-pill !bg-ink/10 !text-ink/90 !border-ink/15">
           <Plus size={12} /> أضف
         </Link>
       </div>
 
       {products.length === 0 ? (
         <div className="py-12 grid place-items-center text-center">
-          <div className="grid place-items-center w-14 h-14 rounded-3xl bg-white/5 border border-white/10 mb-4">
-            <Boxes size={20} className="text-white/60" />
+          <div className="grid place-items-center w-14 h-14 rounded-3xl bg-ink/5 border border-ink/10 mb-4">
+            <Boxes size={20} className="text-ink/60" />
           </div>
-          <p className="text-white/70 font-medium">لا توجد منتجات بعد</p>
-          <p className="text-white/40 text-xs mt-1 max-w-xs">
+          <p className="text-ink/70 font-medium">لا توجد منتجات بعد</p>
+          <p className="text-ink/40 text-xs mt-1 max-w-xs">
             ابدئي بإضافة أول منتج من AI Studio.
           </p>
         </div>
@@ -540,13 +543,13 @@ function ProductsPanel({ products, onDelete, onUpdate }) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.04 * i }}
-                className="relative rounded-2xl overflow-hidden border border-white/10 bg-white/[0.04]"
+                className="relative rounded-2xl overflow-hidden border border-ink/10 bg-ink/[0.04]"
               >
-                <div className="aspect-square relative bg-white/5">
+                <div className="aspect-square relative bg-ink/5">
                   {photo ? (
                     <img src={photo} alt={p.nameAr} className="w-full h-full object-cover" loading="lazy" />
                   ) : (
-                    <div className="w-full h-full grid place-items-center text-white/30">
+                    <div className="w-full h-full grid place-items-center text-ink/30">
                       <ImageIcon size={20} />
                     </div>
                   )}
@@ -587,14 +590,14 @@ function ProductsPanel({ products, onDelete, onUpdate }) {
                 </div>
 
                 <div className="p-3 text-right">
-                  <div className="text-sm text-white font-semibold truncate">{p.nameAr || '—'}</div>
-                  <div className="text-[11px] text-white/50 truncate">{p.nameEn}</div>
+                  <div className="text-sm text-ink font-semibold truncate">{p.nameAr || '—'}</div>
+                  <div className="text-[11px] text-ink/50 truncate">{p.nameEn}</div>
                   <div className="mt-1.5 flex items-center justify-between">
                     <span className="text-coral font-bold text-sm">
-                      {p.price} <span className="text-white/55 text-[11px]">دج</span>
+                      {p.price} <span className="text-ink/55 text-[11px]">دج</span>
                     </span>
                     {p.category && (
-                      <span className="text-[10px] uppercase tracking-wider text-white/45">
+                      <span className="text-[10px] uppercase tracking-wider text-ink/45">
                         {p.category}
                       </span>
                     )}
@@ -628,19 +631,19 @@ function ProductsPanel({ products, onDelete, onUpdate }) {
             <motion.div
               initial={{ scale: 0.92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96 }}
               onClick={(e) => e.stopPropagation()}
-              className="glass-dark border-hairline rounded-[28px] p-7 w-[min(420px,92vw)] text-center"
+              className="glass-strong border-hairline rounded-[28px] p-7 w-[min(420px,92vw)] text-center"
             >
               <div className="grid place-items-center w-14 h-14 mx-auto rounded-3xl bg-rose-500/15 border border-rose-500/30">
-                <AlertCircle size={22} className="text-rose-300" />
+                <AlertCircle size={22} className="text-rose-600" />
               </div>
-              <h3 className="text-white font-semibold mt-4 text-lg">حذف هذا المنتج؟</h3>
-              <p className="text-sm text-white/65 mt-1.5">
+              <h3 className="text-ink font-semibold mt-4 text-lg">حذف هذا المنتج؟</h3>
+              <p className="text-sm text-ink/65 mt-1.5">
                 سيُحذف <span className="text-peach">{confirming.nameAr}</span> نهائياً من المتجر.
                 هذا الإجراء لا يمكن التراجع عنه.
               </p>
 
               {error && (
-                <div className="mt-3 text-sm text-rose-200 bg-rose-500/10 border border-rose-500/30 rounded-2xl px-3 py-2 text-right">
+                <div className="mt-3 text-sm text-rose-700 bg-rose-500/10 border border-rose-500/30 rounded-2xl px-3 py-2 text-right">
                   {error}
                 </div>
               )}
@@ -650,7 +653,7 @@ function ProductsPanel({ products, onDelete, onUpdate }) {
                   type="button"
                   disabled={!!deletingId}
                   onClick={() => setConfirming(null)}
-                  className="btn-pill !bg-white/10 !text-white/80 !border-white/10 disabled:opacity-50"
+                  className="btn-pill !bg-ink/10 !text-ink/80 !border-ink/10 disabled:opacity-50"
                 >
                   إلغاء
                 </button>
@@ -688,6 +691,9 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState([]);
   const [orderCount, setOrderCount] = useState(0);
   const [revenue, setRevenue] = useState(0);
+  // Recent storefront chat — fed to the admin AI as context so it can
+  // surface common customer questions, drafted replies, etc.
+  const [customerMessages, setCustomerMessages] = useState([]);
 
   // Live products → full list.
   useEffect(() => {
@@ -725,6 +731,12 @@ export default function AdminDashboard() {
     return () => unsub?.();
   }, []);
 
+  // Live storefront chat — last 50 messages across all visitors.
+  useEffect(() => {
+    const unsub = subscribeToRecentChatMessages(setCustomerMessages, 50);
+    return () => unsub?.();
+  }, []);
+
   const kpiValues = {
     revenue,
     orders: orderCount,
@@ -742,7 +754,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-graphite bg-admin-aurora text-white">
+    <div className="min-h-screen bg-pearl bg-aurora text-ink">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex gap-6" dir="ltr">
         <Sidebar />
 
@@ -760,26 +772,26 @@ export default function AdminDashboard() {
           <section className="mt-4">
             <motion.div
               whileHover={{ y: -3 }}
-              className="glass-dark rounded-3xl p-6 border-hairline relative overflow-hidden"
+              className="glass-strong rounded-3xl p-6 border-hairline relative overflow-hidden"
             >
               <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full bg-gradient-to-br from-coral to-violet-400 opacity-30 blur-3xl" />
               <div className="absolute -bottom-16 -left-12 w-56 h-56 rounded-full bg-gradient-to-br from-sky-400 to-emerald-400 opacity-20 blur-3xl" />
 
               <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
                 <div className="flex items-start gap-4">
-                  <div className="grid place-items-center w-14 h-14 rounded-3xl bg-white/10 border border-white/10">
+                  <div className="grid place-items-center w-14 h-14 rounded-3xl bg-ink/10 border border-ink/10">
                     <Sparkles size={20} className="text-peach" />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold text-lg">AI Studio</h3>
-                    <p className="text-sm text-white/60 mt-1 max-w-md">
+                    <h3 className="text-ink font-semibold text-lg">AI Studio</h3>
+                    <p className="text-sm text-ink/60 mt-1 max-w-md">
                       المكان الوحيد لرفع الصور وإضافة المنتجات. ارفع عدة صور وانشر فوراً.
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <span className="chip bg-white/5 border-white/10 text-white/70">
+                      <span className="chip bg-ink/5 border-ink/10 text-ink/70">
                         <Boxes size={11} className="text-peach" /> صور متعددة
                       </span>
-                      <span className="chip bg-white/5 border-white/10 text-white/70">
+                      <span className="chip bg-ink/5 border-ink/10 text-ink/70">
                         نشر فوري
                       </span>
                     </div>
@@ -809,13 +821,15 @@ export default function AdminDashboard() {
         </main>
       </div>
 
-      {/* Floating Gemini assistant — receives live store state so it can
-          answer questions about products, orders, revenue, and suggest copy.
-          Hides itself if VITE_GEMINI_API_KEY isn't configured. */}
+      {/* Floating Gemini assistant — receives live store state + recent
+          storefront chat so it can answer "what are customers asking?",
+          draft replies, summarize feedback, etc. Hides itself if
+          VITE_GEMINI_API_KEY isn't configured. */}
       <AdminAIAssistant
         products={products}
         orders={orders}
         revenue={revenue}
+        customerMessages={customerMessages}
       />
     </div>
   );

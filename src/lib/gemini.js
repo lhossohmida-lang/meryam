@@ -146,6 +146,7 @@ function buildAdminSystemPrompt(context = {}) {
   const {
     products = [],
     orders = [],
+    customerMessages = [],
     productCount,
     orderCount,
     revenue
@@ -160,8 +161,20 @@ function buildAdminSystemPrompt(context = {}) {
     `${i + 1}. ${o.customer || 'زبون'} — ${o.total ?? 0} دج — ${o.items ?? 0} عناصر — ${o.status || 'جديد'}`
   ).join('\n');
 
+  // Customer chat — most recent 30 turns, grouped per visitor session so
+  // the model can see Q→A flow. Trim each message to 300 chars to bound prompt size.
+  const recentChat = customerMessages.slice(-30);
+  const chatLines = recentChat.length
+    ? recentChat.map((m) => {
+        const who = m.role === 'user' ? 'زبون' : 'المساعدة';
+        const sid = (m.sessionId || 'anon').slice(0, 6);
+        const text = String(m.text || '').slice(0, 300).replace(/\s+/g, ' ').trim();
+        return `[${sid}] ${who}: ${text}`;
+      }).join('\n')
+    : '(لا توجد رسائل من الزبائن بعد)';
+
   return `أنتِ مساعدة الإدارة في متجر براءة كيدز للملابس الفاخرة للأطفال في الجزائر.
-دورك: مساعدة المالكة في إدارة المتجر بالكامل — تنظيم الطلبات، إدخال المنتجات، اقتراح الأسماء والأوصاف، تحليل المبيعات، الردّ على استفسارات الزبائن.
+دورك: مساعدة المالكة في إدارة المتجر بالكامل — تنظيم الطلبات، إدخال المنتجات، اقتراح الأسماء والأوصاف، تحليل المبيعات، قراءة وفهم ما يسأله الزبائن في الشات.
 أجيبي بالعربية الجزائرية إن خاطبتك المالكة بها، وبأسلوب عملي مختصر.
 
 == حالة المتجر الآن ==
@@ -169,6 +182,7 @@ function buildAdminSystemPrompt(context = {}) {
 • عدد الطلبات: ${orderCount ?? orders.length}
 • إيرادات آخر 30 يوماً: ${revenue ?? 0} دج
 • الفئات المتاحة: فساتين، أطقم، تريكو، أحذية
+• رسائل شات الزبائن المحفوظة: ${customerMessages.length}
 
 == المنتجات (أحدث ${Math.min(products.length, 20)}) ==
 ${productLines || '(لا توجد منتجات بعد)'}
@@ -176,7 +190,11 @@ ${productLines || '(لا توجد منتجات بعد)'}
 == الطلبات (أحدث ${Math.min(orders.length, 20)}) ==
 ${orderLines || '(لا توجد طلبات بعد)'}
 
+== شات الزبائن (آخر ${recentChat.length} رسالة، [xxxxxx] = آخر 6 أحرف من معرف الجلسة) ==
+${chatLines}
+
 == كيف تساعدين ==
+- لو سألتك "إيش يسأل الزبائن؟" أو "لخّصي شكاوى الزبائن" — حلّلي قسم "شات الزبائن" أعلاه واذكري الأنماط المتكرّرة.
 - لو سألتك "كم منتج عندي؟" أو "إيش الفئة الأكثر؟" — جاوبي مباشرة من البيانات أعلاه.
 - لو طلبت اسم/وصف لمنتج جديد — اقترحي 2-3 خيارات بأسماء عربية وإنجليزية.
 - لو سألت عن تنظيم الطلبات — اقترحي خطوات عملية (تأكيد، تجهيز، شحن، تسليم).

@@ -68,7 +68,7 @@ export default function AdminLogin() {
   const isSignup = mode === MODES.SIGNUP;
 
   return (
-    <div className="min-h-screen bg-graphite bg-admin-aurora text-white grid place-items-center p-4">
+    <div className="min-h-screen bg-pearl bg-aurora text-ink grid place-items-center p-4">
       {/* Decorative glow blobs */}
       <div aria-hidden className="absolute top-10 left-10 w-60 h-60 rounded-full bg-coral/30 blur-3xl pointer-events-none" />
       <div aria-hidden className="absolute bottom-10 right-10 w-72 h-72 rounded-full bg-fuchsia-400/20 blur-3xl pointer-events-none" />
@@ -77,7 +77,7 @@ export default function AdminLogin() {
         initial={{ opacity: 0, y: 24, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        className="relative w-full max-w-md glass-dark border-hairline rounded-[32px] p-8"
+        className="relative w-full max-w-md glass-strong border-hairline rounded-[32px] p-8"
       >
         {/* Header */}
         <div className="text-center mb-7">
@@ -92,7 +92,7 @@ export default function AdminLogin() {
           <p className="text-shimmer text-[11px] tracking-[0.45em] font-semibold">
             BARAA KIDS · STUDIO
           </p>
-          <p className="text-sm text-white/55 mt-3">
+          <p className="text-sm text-ink/55 mt-3">
             {isSignup
               ? 'أنشئ حساب الإدارة الأول لتبدأ.'
               : 'سجّل دخولك للوصول إلى لوحة الإدارة.'}
@@ -112,7 +112,7 @@ export default function AdminLogin() {
                 type="button"
                 onClick={() => { setMode(t.id); setError(null); setInfo(null); }}
                 className={`relative py-2 rounded-xl text-sm font-semibold transition-colors ${
-                  active ? 'text-white' : 'text-white/55 hover:text-white/80'
+                  active ? 'text-white' : 'text-ink/55 hover:text-ink/80'
                 }`}
               >
                 {active && (
@@ -138,16 +138,16 @@ export default function AdminLogin() {
                 exit={{ opacity: 0, height: 0 }}
                 className="block"
               >
-                <span className="text-xs uppercase tracking-[0.2em] text-white/55">الاسم</span>
+                <span className="text-xs uppercase tracking-[0.2em] text-ink/55">الاسم</span>
                 <div className="mt-2 relative">
-                  <UserPlus size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+                  <UserPlus size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40" />
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="اسم العرض"
                     className="w-full bg-white/[0.06] border border-white/10 rounded-2xl pl-11 pr-4 py-3
-                               text-white placeholder:text-white/30 outline-none
+                               text-white placeholder:text-ink/30 outline-none
                                focus:border-coral focus:bg-white/[0.09] transition"
                   />
                 </div>
@@ -156,9 +156,9 @@ export default function AdminLogin() {
           </AnimatePresence>
 
           <label className="block">
-            <span className="text-xs uppercase tracking-[0.2em] text-white/55">البريد الإلكتروني</span>
+            <span className="text-xs uppercase tracking-[0.2em] text-ink/55">البريد الإلكتروني</span>
             <div className="mt-2 relative">
-              <Mail size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+              <Mail size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40" />
               <input
                 type="email"
                 autoComplete="email"
@@ -166,7 +166,7 @@ export default function AdminLogin() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@walida.shop"
                 className="w-full bg-white/[0.06] border border-white/10 rounded-2xl pl-11 pr-4 py-3
-                           text-white placeholder:text-white/30 outline-none
+                           text-white placeholder:text-ink/30 outline-none
                            focus:border-coral focus:bg-white/[0.09] transition"
               />
             </div>
@@ -174,7 +174,7 @@ export default function AdminLogin() {
 
           <label className="block">
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-[0.2em] text-white/55">كلمة المرور</span>
+              <span className="text-xs uppercase tracking-[0.2em] text-ink/55">كلمة المرور</span>
               {!isSignup && (
                 <button
                   type="button"
@@ -186,7 +186,7 @@ export default function AdminLogin() {
               )}
             </div>
             <div className="mt-2 relative">
-              <Lock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+              <Lock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40" />
               <input
                 type={showPwd ? 'text' : 'password'}
                 autoComplete={isSignup ? 'new-password' : 'current-password'}
@@ -194,13 +194,13 @@ export default function AdminLogin() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={isSignup ? '6 أحرف على الأقل' : '••••••••'}
                 className="w-full bg-white/[0.06] border border-white/10 rounded-2xl pl-11 pr-12 py-3
-                           text-white placeholder:text-white/30 outline-none
+                           text-white placeholder:text-ink/30 outline-none
                            focus:border-coral focus:bg-white/[0.09] transition"
               />
               <button
                 type="button"
                 onClick={() => setShowPwd((s) => !s)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/45 hover:text-white/80"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/45 hover:text-ink/80"
               >
                 {showPwd ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
@@ -240,7 +240,7 @@ export default function AdminLogin() {
           </button>
         </form>
 
-        <p className="text-[11px] text-center text-white/40 mt-6 leading-relaxed">
+        <p className="text-[11px] text-center text-ink/40 mt-6 leading-relaxed">
           الوصول للوحة الإدارة محمي بـ Firebase Auth.<br />
           لتفعيل البريد/كلمة المرور: Console → Authentication → Sign-in method → Email/Password.
         </p>

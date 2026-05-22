@@ -14,11 +14,36 @@
 //      bottom nav and product cards.
 // =============================================================================
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Send, Loader2, AlertCircle } from 'lucide-react';
+import { Sparkles, X, Send, Loader2, AlertCircle, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 
 import { chatWithAssistant, isGeminiConfigured } from '../lib/gemini.js';
+import { saveChatMessage } from '../firebase.js';
+import {
+  useSpeechRecognition,
+  speak,
+  cancelSpeaking,
+  isSpeechSynthesisSupported
+} from '../lib/voiceChat.js';
+
+// Stable per-browser ID so we can group a single visitor's turns together.
+// Stored in localStorage so reloads + return visits look continuous to the
+// admin reviewing the conversation later. Falls back gracefully when storage
+// isn't available (private browsing, etc.).
+function loadSessionId() {
+  try {
+    const k = 'walida.chat.sessionId';
+    let id = localStorage.getItem(k);
+    if (!id) {
+      id = (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36));
+      localStorage.setItem(k, id);
+    }
+    return id;
+  } catch {
+    return 'anon-' + Math.random().toString(36).slice(2);
+  }
+}
 
 const WELCOME_MESSAGE = 'مرحباً! أنا مساعدة براءة كيدز 👗 كيف أقدر أساعدك اليوم؟';
 
@@ -77,6 +102,28 @@ export default function AIChatWidget() {
   const scrollerRef = useRef(null);
   const inputRef = useRef(null);
 
+  // Voice — mic input (always wired when supported) and TTS that auto-reads
+  // the AI's reply when the speaker toggle is on. The toggle persists in
+  // localStorage so a customer's preference survives reloads.
+  const [speakReplies, setSpeakReplies] = useState(() => {
+    try { return localStorage.getItem('walida.chat.speak') === '1'; } catch { return false; }
+  });
+  const voice = useSpeechRecognition({ lang: 'ar-DZ' });
+  const ttsSupported = isSpeechSynthesisSupported();
+
+  function toggleSpeak() {
+    setSpeakReplies((v) => {
+      const next = !v;
+      try { localStorage.setItem('walida.chat.speak', next ? '1' : '0'); } catch {/* no-op */}
+      if (!next) cancelSpeaking(); // turn off → stop anything in-flight
+      return next;
+    });
+  }
+
+  // Stable session ID — reused across reloads so the admin can follow a
+  // single visitor's thread end-to-end.
+  const sessionId = useMemo(() => loadSessionId(), []);
+
   // Auto-scroll to the newest message + focus the input when the panel opens.
   // Hooks must run unconditionally — the "hide when unconfigured" check happens
   // AFTER all hooks are declared (see early-return below).
@@ -93,9 +140,8 @@ export default function AIChatWidget() {
   // hooks so React's hook order stays consistent across renders.
   if (!isGeminiConfigured()) return null;
 
-  async function handleSend(e) {
-    e?.preventDefault?.();
-    const text = input.trim();
+  async function sendText(rawText) {
+    const text = String(rawText ?? '').trim();
     if (!text || sending) return;
 
     setError(null);
@@ -104,6 +150,10 @@ export default function AIChatWidget() {
 
     // Optimistically append the user turn.
     setMessages((prev) => [...prev, { role: 'user', text }]);
+
+    // Persist the customer's message so the admin AI can see what real
+    // visitors are asking. Fire-and-forget: failures don't block the chat.
+    saveChatMessage(sessionId, 'user', text);
 
     // Build Gemini-shaped history from prior turns ONLY (skip the welcome
     // greeting since it's UI-only and would violate Gemini's "first turn must
@@ -118,10 +168,32 @@ export default function AIChatWidget() {
     try {
       const reply = await chatWithAssistant(history, text);
       setMessages((prev) => [...prev, { role: 'model', text: reply }]);
+      // Also persist the AI reply so the admin can review how the
+      // assistant is answering and improve the system prompt.
+      saveChatMessage(sessionId, 'model', reply);
+      // Read it aloud when the speaker toggle is on.
+      if (speakReplies) speak(reply, { lang: 'ar-DZ' });
     } catch (err) {
       setError(err?.message || 'تعذّر الوصول إلى المساعدة. حاولي لاحقاً.');
     } finally {
       setSending(false);
+    }
+  }
+
+  function handleSend(e) {
+    e?.preventDefault?.();
+    sendText(input);
+  }
+
+  // Start / stop the mic. On final transcript, send immediately so the
+  // experience is one-shot like a walkie-talkie.
+  function handleMic() {
+    if (voice.listening) {
+      voice.stop();
+    } else {
+      voice.start((finalText) => {
+        if (finalText) sendText(finalText);
+      });
     }
   }
 
@@ -200,6 +272,19 @@ export default function AIChatWidget() {
                   مقاسات · ألوان · اقتراحات
                 </div>
               </div>
+              {/* TTS toggle — only when the browser supports synthesis. */}
+              {ttsSupported && (
+                <button
+                  type="button"
+                  onClick={toggleSpeak}
+                  className={`grid place-items-center w-9 h-9 rounded-full glass transition
+                    ${speakReplies ? 'text-coral' : 'text-ink/70 hover:text-ink'}`}
+                  aria-label={speakReplies ? 'إيقاف القراءة الصوتية' : 'تشغيل القراءة الصوتية'}
+                  title={speakReplies ? 'القراءة الصوتية مفعّلة' : 'تشغيل القراءة الصوتية'}
+                >
+                  {speakReplies ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -237,6 +322,19 @@ export default function AIChatWidget() {
               )}
             </div>
 
+            {/* Voice transcript preview — shown live while the mic is hot. */}
+            {voice.listening && (
+              <div className="px-3 pt-2 text-[11px] text-coral flex items-center gap-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-coral animate-pulse" />
+                <span className="truncate">{voice.transcript || 'أنا أستمع…'}</span>
+              </div>
+            )}
+            {voice.error && (
+              <div className="px-3 pt-2 text-[11px] text-rose-700">
+                {voice.error}
+              </div>
+            )}
+
             {/* Input */}
             <form
               onSubmit={handleSend}
@@ -247,13 +345,28 @@ export default function AIChatWidget() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={onKeyDown}
-                disabled={sending}
-                placeholder="اسأليني عن المقاسات أو المنتجات..."
+                disabled={sending || voice.listening}
+                placeholder={voice.listening ? 'أنا أستمع…' : 'اسأليني عن المقاسات أو المنتجات...'}
                 aria-label="اكتبي رسالتك"
                 className="flex-1 bg-white/80 border border-white/80 rounded-2xl px-4 py-2.5
                            text-sm text-ink placeholder:text-ink/40 outline-none
                            focus:border-coral focus:bg-white transition disabled:opacity-60"
               />
+              {voice.supported && (
+                <button
+                  type="button"
+                  onClick={handleMic}
+                  disabled={sending}
+                  className={`grid place-items-center w-11 h-11 rounded-2xl shrink-0 transition
+                    ${voice.listening
+                      ? 'bg-rose-500 text-white animate-pulse'
+                      : 'bg-white/80 text-coral border border-white/90 hover:bg-white'}`}
+                  aria-label={voice.listening ? 'إيقاف التسجيل' : 'تحدّثي'}
+                  title={voice.listening ? 'إيقاف التسجيل' : 'تحدّثي بدل الكتابة'}
+                >
+                  {voice.listening ? <MicOff size={16} /> : <Mic size={16} />}
+                </button>
+              )}
               <button
                 type="submit"
                 disabled={sending || !input.trim()}

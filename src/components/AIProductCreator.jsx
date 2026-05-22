@@ -61,8 +61,8 @@ function GlowSpinner({ percent = 0, label = 'Working…' }) {
       </svg>
       <div className="absolute text-center">
         <Sparkles className="mx-auto text-peach mb-1" size={18} />
-        <div className="text-white font-semibold text-2xl">{Math.round(percent)}%</div>
-        <div className="text-white/60 text-xs max-w-[140px] mx-auto leading-tight mt-0.5">
+        <div className="text-ink font-semibold text-2xl">{Math.round(percent)}%</div>
+        <div className="text-ink/60 text-xs max-w-[140px] mx-auto leading-tight mt-0.5">
           {label}
         </div>
       </div>
@@ -108,8 +108,8 @@ function DropZone({ onFiles, disabled }) {
       }}
       onClick={() => !disabled && inputRef.current?.click()}
       className={`relative rounded-3xl border border-dashed transition-all overflow-hidden cursor-pointer
-        ${dragging ? 'border-coral bg-white/10' : 'border-white/20 bg-white/[0.04]'}
-        ${disabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-white/[0.08]'}
+        ${dragging ? 'border-coral bg-ink/10' : 'border-ink/15 bg-ink/[0.04]'}
+        ${disabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-white/80'}
         min-h-[200px] grid place-items-center text-center px-6 py-10`}
     >
       <input
@@ -124,11 +124,11 @@ function DropZone({ onFiles, disabled }) {
         <div className="grid place-items-center w-14 h-14 mx-auto rounded-3xl bg-gradient-to-br from-coral to-peach shadow-glow">
           <Upload className="text-white" size={20} />
         </div>
-        <h3 className="mt-4 text-white font-semibold">اسحب صور المنتج هنا</h3>
-        <p className="text-white/55 text-sm mt-1 max-w-md mx-auto">
+        <h3 className="mt-4 text-ink font-semibold">اسحب صور المنتج هنا</h3>
+        <p className="text-ink/55 text-sm mt-1 max-w-md mx-auto">
           يمكنك إضافة عدة صور للمنتج.
         </p>
-        <button type="button" className="btn-pill mt-4 !bg-white/10 !text-white/90 !border-white/15">
+        <button type="button" className="btn-pill mt-4 !bg-ink/10 !text-ink/90 !border-ink/15">
           <Plus size={14} />
           اختر صور
         </button>
@@ -157,7 +157,7 @@ function GalleryStrip({ assets, removeAsset, disabled }) {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.35, delay: i * 0.04 }}
-            className="relative group rounded-2xl overflow-hidden border border-white/10"
+            className="relative group rounded-2xl overflow-hidden border border-ink/10"
           >
             <div className="relative aspect-square">
               <img src={a.preview} alt="" className="w-full h-full object-cover" />
@@ -167,13 +167,13 @@ function GalleryStrip({ assets, removeAsset, disabled }) {
                 type="button"
                 disabled={disabled}
                 onClick={() => removeAsset(a.id)}
-                className="absolute top-2 right-2 grid place-items-center w-7 h-7 rounded-full bg-black/55 text-white/90 backdrop-blur hover:bg-black/80"
+                className="absolute top-2 right-2 grid place-items-center w-7 h-7 rounded-full bg-black/55 text-ink/90 backdrop-blur hover:bg-black/80"
                 aria-label="remove"
               >
                 <X size={12} />
               </button>
 
-              <div className="absolute bottom-2 right-2 left-2 text-[10px] text-white/85 truncate">
+              <div className="absolute bottom-2 right-2 left-2 text-[10px] text-ink/85 truncate">
                 {a.file.name}
               </div>
             </div>
@@ -190,14 +190,14 @@ function GalleryStrip({ assets, removeAsset, disabled }) {
 function Field({ label, hint, ...props }) {
   return (
     <label className="block">
-      <span className="text-xs uppercase tracking-[0.2em] text-white/55">{label}</span>
+      <span className="text-xs uppercase tracking-[0.2em] text-ink/55">{label}</span>
       <input
         {...props}
-        className="mt-2 w-full bg-white/[0.06] border border-white/10 rounded-2xl px-4 py-3
-                   text-white placeholder:text-white/30 outline-none
-                   focus:border-coral focus:bg-white/[0.09] transition"
+        className="mt-2 w-full bg-white/70 border border-ink/10 rounded-2xl px-4 py-3
+                   text-ink placeholder:text-ink/30 outline-none
+                   focus:border-coral focus:bg-white/90 transition"
       />
-      {hint && <span className="text-[11px] text-white/40 mt-1 block">{hint}</span>}
+      {hint && <span className="text-[11px] text-ink/40 mt-1 block">{hint}</span>}
     </label>
   );
 }
@@ -217,7 +217,7 @@ function FirebaseSetupBanner({ onRetry, reason, errorMessage }) {
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mb-6 glass-dark border-hairline rounded-3xl p-5 relative overflow-hidden"
+      className="mb-6 glass-strong border-hairline rounded-3xl p-5 relative overflow-hidden"
     >
       <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-gradient-to-br from-sky-400 to-fuchsia-400 opacity-25 blur-3xl" />
       <div className="flex items-start gap-3 relative">
@@ -225,31 +225,31 @@ function FirebaseSetupBanner({ onRetry, reason, errorMessage }) {
           <AlertCircle size={18} className="text-sky-300" />
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="text-white font-semibold">
+          <h4 className="text-ink font-semibold">
             {reason === 'auth' ? 'تسجيل الدخول المجهول غير مُفعّل' : 'Firestore غير مُهيّأ بعد'}
           </h4>
           {errorMessage && (
-            <p className="mt-2 text-xs text-rose-200 bg-rose-400/10 border border-rose-400/20 rounded-xl px-3 py-2">
+            <p className="mt-2 text-xs text-rose-700 bg-rose-400/10 border border-rose-400/20 rounded-xl px-3 py-2">
               <span className="opacity-70">رسالة:</span> {errorMessage}
             </p>
           )}
-          <p className="text-sm text-white/65 mt-2">
+          <p className="text-sm text-ink/65 mt-2">
             مرتين نقر في Firebase Console — وكل شيء يعمل:
           </p>
-          <ol className="mt-3 grid gap-2 text-sm text-white/75 list-decimal pr-5">
+          <ol className="mt-3 grid gap-2 text-sm text-ink/75 list-decimal pr-5">
             <li>
               <a href="https://console.firebase.google.com/project/mreim-3027a/firestore"
                  target="_blank" rel="noreferrer"
                  className="text-peach underline underline-offset-2">
                 Firestore Database
-              </a>{' '}→ <span className="text-white font-semibold">Create database</span> → اختاري الموقع → <span className="text-white font-semibold">Start in production mode</span>.
+              </a>{' '}→ <span className="text-ink font-semibold">Create database</span> → اختاري الموقع → <span className="text-ink font-semibold">Start in production mode</span>.
             </li>
             <li>
               <a href="https://console.firebase.google.com/project/mreim-3027a/authentication/providers"
                  target="_blank" rel="noreferrer"
                  className="text-peach underline underline-offset-2">
                 Authentication → Sign-in method
-              </a>{' '}→ Anonymous → <span className="text-white font-semibold">Enable</span>.
+              </a>{' '}→ Anonymous → <span className="text-ink font-semibold">Enable</span>.
             </li>
             <li>
               في{' '}
@@ -258,12 +258,12 @@ function FirebaseSetupBanner({ onRetry, reason, errorMessage }) {
                  className="text-peach underline underline-offset-2">
                 Rules
               </a>
-              {' '}الصقي محتوى ملف <code className="text-peach">firestore.rules</code> الموجود في جذر المشروع، ثم <span className="text-white font-semibold">Publish</span>.
+              {' '}الصقي محتوى ملف <code className="text-peach">firestore.rules</code> الموجود في جذر المشروع، ثم <span className="text-ink font-semibold">Publish</span>.
             </li>
           </ol>
           <button
             onClick={onRetry}
-            className="btn-pill mt-4 !bg-white/10 !text-white/90 !border-white/15"
+            className="btn-pill mt-4 !bg-ink/10 !text-ink/90 !border-ink/15"
           >
             <Sparkles size={12} /> أعد الفحص
           </button>
@@ -279,7 +279,7 @@ function CloudinarySetupBanner({ onRetry, reason, errorMessage }) {
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mb-6 glass-dark border-hairline rounded-3xl p-5 relative overflow-hidden"
+      className="mb-6 glass-strong border-hairline rounded-3xl p-5 relative overflow-hidden"
     >
       <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-gradient-to-br from-amber-400 to-rose-400 opacity-25 blur-3xl" />
       <div className="flex items-start gap-3 relative">
@@ -287,20 +287,20 @@ function CloudinarySetupBanner({ onRetry, reason, errorMessage }) {
           <AlertCircle size={18} className="text-amber-300" />
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="text-white font-semibold">
+          <h4 className="text-ink font-semibold">
             {reason === 'missing-env'
               ? 'Cloudinary غير مُعدّ بعد'
               : 'تعذّر الاتصال بـ Cloudinary'}
           </h4>
           {errorMessage && (
-            <p className="mt-2 text-xs text-rose-200 bg-rose-400/10 border border-rose-400/20 rounded-xl px-3 py-2">
+            <p className="mt-2 text-xs text-rose-700 bg-rose-400/10 border border-rose-400/20 rounded-xl px-3 py-2">
               <span className="opacity-70">رسالة Cloudinary:</span> {errorMessage}
             </p>
           )}
-          <p className="text-sm text-white/65 mt-2">
+          <p className="text-sm text-ink/65 mt-2">
             Cloudinary مجاني (25GB) — الإعداد دقيقتان فقط:
           </p>
-          <ol className="mt-3 grid gap-2 text-sm text-white/75 list-decimal pr-5">
+          <ol className="mt-3 grid gap-2 text-sm text-ink/75 list-decimal pr-5">
             <li>
               أنشئ حساب على{' '}
               <a href="https://cloudinary.com/users/register_free"
@@ -310,7 +310,7 @@ function CloudinarySetupBanner({ onRetry, reason, errorMessage }) {
               </a>{' '}(بلا بطاقة).
             </li>
             <li>
-              من الـ Dashboard انسخ <span className="text-white font-semibold">Cloud name</span>.
+              من الـ Dashboard انسخ <span className="text-ink font-semibold">Cloud name</span>.
             </li>
             <li>
               <a href="https://console.cloudinary.com/settings/upload"
@@ -318,7 +318,7 @@ function CloudinarySetupBanner({ onRetry, reason, errorMessage }) {
                  className="text-peach underline underline-offset-2">
                 Settings → Upload
               </a>
-              {' '}→ Add upload preset → <span className="text-white font-semibold">Signing mode: Unsigned</span> → Save.
+              {' '}→ Add upload preset → <span className="text-ink font-semibold">Signing mode: Unsigned</span> → Save.
             </li>
             <li>
               أضف القيمتين في ملف <code className="text-peach">.env</code> في جذر المشروع:
@@ -332,14 +332,14 @@ function CloudinarySetupBanner({ onRetry, reason, errorMessage }) {
             </li>
           </ol>
           {cfg.cloudName && (
-            <p className="text-xs text-white/40 mt-3">
-              القيمة المُكتشفة حالياً: cloud=<span className="text-white/70">{cfg.cloudName}</span>
-              {' · '}preset=<span className="text-white/70">{cfg.preset || '—'}</span>
+            <p className="text-xs text-ink/40 mt-3">
+              القيمة المُكتشفة حالياً: cloud=<span className="text-ink/70">{cfg.cloudName}</span>
+              {' · '}preset=<span className="text-ink/70">{cfg.preset || '—'}</span>
             </p>
           )}
           <button
             onClick={onRetry}
-            className="btn-pill mt-4 !bg-white/10 !text-white/90 !border-white/15"
+            className="btn-pill mt-4 !bg-ink/10 !text-ink/90 !border-ink/15"
           >
             <Sparkles size={12} /> أعد الفحص
           </button>
@@ -499,12 +499,12 @@ export default function AIProductCreator() {
   const busy = state === STATES.SAVING;
 
   return (
-    <div className="min-h-screen bg-graphite bg-admin-aurora text-white">
+    <div className="min-h-screen bg-pearl bg-aurora text-ink">
       <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8" dir="ltr">
 
         {/* Topbar */}
         <div className="flex items-center justify-between mb-8">
-          <Link to="/admin" className="glass-dark inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-sm text-white/80 hover:text-white">
+          <Link to="/admin" className="glass-strong inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-sm text-ink/80 hover:text-ink">
             <ArrowLeft size={14} /> Back
           </Link>
           <div className="text-center">
@@ -534,16 +534,16 @@ export default function AIProductCreator() {
         <div className="grid lg:grid-cols-2 gap-6">
 
           {/* Upload + gallery */}
-          <div className="glass-dark rounded-3xl p-5 border-hairline">
+          <div className="glass-strong rounded-3xl p-5 border-hairline">
             <div className="flex items-center justify-between mb-1">
-              <h3 className="text-white font-semibold">معرض الصور</h3>
+              <h3 className="text-ink font-semibold">معرض الصور</h3>
               {assets.length > 0 && (
-                <span className="chip bg-white/5 border-white/10 text-white/70">
+                <span className="chip bg-ink/5 border-ink/10 text-ink/70">
                   {assets.length} {assets.length === 1 ? 'صورة' : 'صور'}
                 </span>
               )}
             </div>
-            <p className="text-xs text-white/50 mb-4">
+            <p className="text-xs text-ink/50 mb-4">
               أضيفي عدة صور للمنتج.
             </p>
 
@@ -560,7 +560,7 @@ export default function AIProductCreator() {
                 <button
                   type="button"
                   onClick={reset}
-                  className="text-white/50 hover:text-white inline-flex items-center gap-1 text-xs"
+                  className="text-ink/50 hover:text-ink inline-flex items-center gap-1 text-xs"
                 >
                   <X size={11} /> مسح الكل
                 </button>
@@ -569,9 +569,9 @@ export default function AIProductCreator() {
           </div>
 
           {/* Metadata + action */}
-          <div className="glass-dark rounded-3xl p-5 border-hairline">
-            <h3 className="text-white font-semibold mb-1">تفاصيل المنتج</h3>
-            <p className="text-xs text-white/50 mb-4">
+          <div className="glass-strong rounded-3xl p-5 border-hairline">
+            <h3 className="text-ink font-semibold mb-1">تفاصيل المنتج</h3>
+            <p className="text-xs text-ink/50 mb-4">
               ستظهر مباشرة على الواجهة الأمامية بعد المعالجة.
             </p>
 
@@ -591,11 +591,11 @@ export default function AIProductCreator() {
                 ) : (
                   <motion.div
                     initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-                    className="rounded-2xl bg-white/[0.06] border border-white/10 p-3"
+                    className="rounded-2xl bg-white/70 border border-ink/10 p-3"
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Sparkles size={13} className="text-peach" />
-                      <span className="text-xs text-white/70">اكتبي كلمات مفتاحية ثم اضغطي توليد</span>
+                      <span className="text-xs text-ink/70">اكتبي كلمات مفتاحية ثم اضغطي توليد</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <input
@@ -608,9 +608,9 @@ export default function AIProductCreator() {
                         autoFocus
                         placeholder="فستان زهري قطن صيفي…"
                         disabled={aiBusy}
-                        className="flex-1 bg-white/[0.06] border border-white/10 rounded-xl px-3 py-2
-                                   text-sm text-white placeholder:text-white/30 outline-none
-                                   focus:border-coral focus:bg-white/[0.09] transition disabled:opacity-60"
+                        className="flex-1 bg-white/70 border border-ink/10 rounded-xl px-3 py-2
+                                   text-sm text-ink placeholder:text-ink/30 outline-none
+                                   focus:border-coral focus:bg-white/90 transition disabled:opacity-60"
                       />
                       <button
                         type="button"
@@ -628,14 +628,14 @@ export default function AIProductCreator() {
                         type="button"
                         onClick={() => { setAiOpen(false); setAiError(null); setAiKeywords(''); }}
                         disabled={aiBusy}
-                        className="grid place-items-center w-9 h-10 rounded-xl bg-white/5 text-white/70 hover:text-white shrink-0"
+                        className="grid place-items-center w-9 h-10 rounded-xl bg-ink/5 text-ink/70 hover:text-ink shrink-0"
                         aria-label="إلغاء"
                       >
                         <X size={13} />
                       </button>
                     </div>
                     {aiError && (
-                      <div className="mt-2 flex items-start gap-2 p-2 rounded-xl bg-rose-400/10 border border-rose-400/30 text-rose-200 text-xs">
+                      <div className="mt-2 flex items-start gap-2 p-2 rounded-xl bg-rose-400/10 border border-rose-400/30 text-rose-700 text-xs">
                         <AlertCircle size={12} className="mt-0.5 shrink-0" />
                         <span>{aiError}</span>
                       </div>
@@ -666,16 +666,16 @@ export default function AIProductCreator() {
                 onChange={(e) => setMeta({ ...meta, price: e.target.value })}
               />
               <label className="block">
-                <span className="text-xs uppercase tracking-[0.2em] text-white/55">الفئة</span>
+                <span className="text-xs uppercase tracking-[0.2em] text-ink/55">الفئة</span>
                 <select
                   value={meta.category}
                   onChange={(e) => setMeta({ ...meta, category: e.target.value })}
-                  className="mt-2 w-full bg-white/[0.06] border border-white/10 rounded-2xl px-4 py-3
-                             text-white outline-none appearance-none
-                             focus:border-coral focus:bg-white/[0.09] transition"
+                  className="mt-2 w-full bg-white/70 border border-ink/10 rounded-2xl px-4 py-3
+                             text-ink outline-none appearance-none
+                             focus:border-coral focus:bg-white/90 transition"
                 >
                   {PRODUCT_CATEGORIES.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-graphite text-white">
+                    <option key={c.id} value={c.id} className="bg-white text-ink">
                       {c.ar} · {c.en}
                     </option>
                   ))}
@@ -711,7 +711,7 @@ export default function AIProductCreator() {
               )}
             </button>
 
-            <ul className="mt-5 grid gap-2 text-xs text-white/55">
+            <ul className="mt-5 grid gap-2 text-xs text-ink/55">
               <li className="flex items-center gap-2">
                 <Image size={12} className="text-peach" />
                 الصور تُرفع على Cloudinary
@@ -726,7 +726,7 @@ export default function AIProductCreator() {
               {error && (
                 <motion.div
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  className="mt-4 flex items-start gap-2 p-3 rounded-2xl bg-rose-400/10 border border-rose-400/30 text-rose-200 text-sm"
+                  className="mt-4 flex items-start gap-2 p-3 rounded-2xl bg-rose-400/10 border border-rose-400/30 text-rose-700 text-sm"
                 >
                   <AlertCircle size={16} className="mt-0.5 shrink-0" />
                   <span>{error}</span>
@@ -746,11 +746,11 @@ export default function AIProductCreator() {
               <motion.div
                 initial={{ scale: 0.92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96 }}
                 transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                className="glass-dark border-hairline rounded-[32px] p-10 text-center w-[min(420px,90vw)]"
+                className="glass-strong border-hairline rounded-[32px] p-10 text-center w-[min(420px,90vw)]"
               >
                 <GlowSpinner percent={progress.percent} label={progress.label} />
-                <h3 className="text-white font-semibold mt-6">جاري الرفع…</h3>
-                <p className="text-sm text-white/55 mt-1">
+                <h3 className="text-ink font-semibold mt-6">جاري الرفع…</h3>
+                <p className="text-sm text-ink/55 mt-1">
                   رفع الصور ثم النشر التلقائي.
                 </p>
               </motion.div>
@@ -767,19 +767,19 @@ export default function AIProductCreator() {
             >
               <motion.div
                 initial={{ scale: 0.92, y: 12 }} animate={{ scale: 1, y: 0 }}
-                className="glass-dark border-hairline rounded-[32px] p-10 text-center w-[min(440px,90vw)]"
+                className="glass-strong border-hairline rounded-[32px] p-10 text-center w-[min(440px,90vw)]"
               >
                 <div className="grid place-items-center w-16 h-16 mx-auto rounded-3xl bg-gradient-to-br from-emerald-400 to-teal-400 shadow-glow">
                   <CheckCircle2 className="text-white" size={26} />
                 </div>
-                <h3 className="text-white font-semibold mt-5 text-xl">تم النشر بنجاح</h3>
-                <p className="text-sm text-white/60 mt-2">
+                <h3 className="text-ink font-semibold mt-5 text-xl">تم النشر بنجاح</h3>
+                <p className="text-sm text-ink/60 mt-2">
                   المنتج <span className="text-peach">{meta.nameAr}</span> أصبح متاحاً للزبائن.
                 </p>
-                <p className="text-[11px] text-white/40 mt-2">id: {savedProductId}</p>
+                <p className="text-[11px] text-ink/40 mt-2">id: {savedProductId}</p>
 
                 <div className="mt-6 flex items-center justify-center gap-3">
-                  <button onClick={reset} className="btn-pill !bg-white/10 !text-white/80 !border-white/10">
+                  <button onClick={reset} className="btn-pill !bg-ink/10 !text-ink/80 !border-ink/10">
                     إنشاء آخر
                   </button>
                   <button onClick={() => navigate('/')} className="btn-coral text-sm">
