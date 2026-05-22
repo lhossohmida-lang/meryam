@@ -51,18 +51,49 @@ function getKey() {
   return key;
 }
 
+// Retry transient Google errors (503 overloaded, 429 rate-limited) with
+// exponential backoff. Permanent errors (400 bad request, 404 model gone,
+// 401 bad key) bubble up immediately so the caller can show the real cause.
+// Total worst-case wait at attempt=3 is 1s + 2s = 3s before final failure.
+async function withRetry(fn, attempts = 3) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const msg = String(err?.message || '');
+      const transient = msg.includes('503') || msg.includes('overloaded')
+                     || msg.includes('429') || msg.includes('high demand');
+      if (!transient || i === attempts - 1) break;
+      await new Promise((r) => setTimeout(r, 1000 * 2 ** i));
+    }
+  }
+  // Rewrite the most common transient errors into something the UI can show.
+  const msg = String(lastErr?.message || '');
+  if (msg.includes('503') || msg.includes('overloaded') || msg.includes('high demand')) {
+    throw new Error('النموذج مزدحم الآن، حاولي بعد لحظات قليلة.');
+  }
+  if (msg.includes('429')) {
+    throw new Error('تجاوزت الحصة المسموحة. حاولي خلال دقيقة أو فعّلي الـ billing.');
+  }
+  throw lastErr;
+}
+
 // ---------------------------------------------------------------------------
 //  Storefront chat — multi-turn with persisted history.
 // ---------------------------------------------------------------------------
 export async function chatWithAssistant(history, userMessage) {
-  const genAI = new GoogleGenerativeAI(getKey());
-  const model = genAI.getGenerativeModel({
-    model: MODEL_ID,
-    systemInstruction: SYSTEM_PROMPT
+  return withRetry(async () => {
+    const genAI = new GoogleGenerativeAI(getKey());
+    const model = genAI.getGenerativeModel({
+      model: MODEL_ID,
+      systemInstruction: SYSTEM_PROMPT
+    });
+    const chat = model.startChat({ history: Array.isArray(history) ? history : [] });
+    const result = await chat.sendMessage(userMessage);
+    return result.response.text();
   });
-  const chat = model.startChat({ history: Array.isArray(history) ? history : [] });
-  const result = await chat.sendMessage(userMessage);
-  return result.response.text();
 }
 
 // ---------------------------------------------------------------------------
@@ -71,10 +102,11 @@ export async function chatWithAssistant(history, userMessage) {
 //  caller can show a clear error and let the admin try different keywords.
 // ---------------------------------------------------------------------------
 export async function generateProductContent(keywords) {
-  const genAI = new GoogleGenerativeAI(getKey());
-  const model = genAI.getGenerativeModel({ model: MODEL_ID });
+  const text = await withRetry(async () => {
+    const genAI = new GoogleGenerativeAI(getKey());
+    const model = genAI.getGenerativeModel({ model: MODEL_ID });
 
-  const prompt = `أنت خبير في ملابس الأطفال الفاخرة.
+    const prompt = `أنت خبير في ملابس الأطفال الفاخرة.
 من الكلمات التالية: "${keywords}"
 أنشئ:
 1. اسم منتج بالعربية (nameAr)
@@ -83,9 +115,10 @@ export async function generateProductContent(keywords) {
 أجب بـ JSON فقط بدون أي نص آخر:
 {"nameAr":"...","nameEn":"...","description":"..."}`;
 
-  const result = await model.generateContent(prompt);
-  // Strip markdown code fences the model sometimes wraps JSON in.
-  const text = result.response.text().replace(/```json|```/g, '').trim();
+    const result = await model.generateContent(prompt);
+    // Strip markdown code fences the model sometimes wraps JSON in.
+    return result.response.text().replace(/```json|```/g, '').trim();
+  });
   try {
     return JSON.parse(text);
   } catch {
@@ -152,12 +185,14 @@ ${orderLines || '(لا توجد طلبات بعد)'}
 }
 
 export async function chatWithAdminAssistant(history, userMessage, context = {}) {
-  const genAI = new GoogleGenerativeAI(getKey());
-  const model = genAI.getGenerativeModel({
-    model: MODEL_ID,
-    systemInstruction: buildAdminSystemPrompt(context)
+  return withRetry(async () => {
+    const genAI = new GoogleGenerativeAI(getKey());
+    const model = genAI.getGenerativeModel({
+      model: MODEL_ID,
+      systemInstruction: buildAdminSystemPrompt(context)
+    });
+    const chat = model.startChat({ history: Array.isArray(history) ? history : [] });
+    const result = await chat.sendMessage(userMessage);
+    return result.response.text();
   });
-  const chat = model.startChat({ history: Array.isArray(history) ? history : [] });
-  const result = await chat.sendMessage(userMessage);
-  return result.response.text();
 }
