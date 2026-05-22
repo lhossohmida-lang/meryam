@@ -396,7 +396,6 @@ function ProductsPanel({ products, onDelete, onUpdate }) {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {products.map((p, i) => {
-            const hasModel = !!p.modelUrl && !p.modelUrl.includes('/image/upload/');
             const photo = p.imageUrl || p.images?.[0]?.url;
             const busy = deletingId === p.id;
             return (
@@ -419,18 +418,13 @@ function ProductsPanel({ products, onDelete, onUpdate }) {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/0" />
 
                   {/* Badges */}
-                  <div className="absolute top-2 left-2 flex flex-col gap-1">
-                    {hasModel && (
-                      <span className="chip bg-coral/85 border-coral/50 text-white !py-0.5">
-                        <Box size={10} /> 3D
-                      </span>
-                    )}
-                    {p.images?.length > 1 && (
+                  {p.images?.length > 1 && (
+                    <div className="absolute top-2 left-2">
                       <span className="chip bg-white/85 border-white/90 text-ink !py-0.5">
                         {p.images.length} صور
                       </span>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {/* Action buttons (edit + delete) */}
                   <div className="absolute top-2 right-2 flex flex-col gap-1.5">
@@ -551,18 +545,16 @@ const KPI_DEFS = [
   { id: 'revenue',  label: 'Revenue (30d)', icon: TrendingUp, accent: 'from-coral to-peach',
     format: (v) => `${v.toLocaleString()} دج` },
   { id: 'orders',   label: 'Orders',         icon: ShoppingBag, accent: 'from-sky-400 to-indigo-400' },
-  { id: 'visitors', label: 'Products',       icon: Boxes,       accent: 'from-fuchsia-400 to-violet-400' },
-  { id: 'models',   label: '3D Models',      icon: Boxes,       accent: 'from-emerald-400 to-teal-400' }
+  { id: 'visitors', label: 'Products',       icon: Boxes,       accent: 'from-fuchsia-400 to-violet-400' }
 ];
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
-  const [modelsCount, setModelsCount] = useState(0);
   const [orderCount, setOrderCount] = useState(0);
   const [revenue, setRevenue] = useState(0);
 
-  // Live products → full list + the count of ones with a usable .glb model.
+  // Live products → full list.
   useEffect(() => {
     let unsub;
     try {
@@ -572,9 +564,6 @@ export default function AdminDashboard() {
         (snap) => {
           const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
           setProducts(list);
-          setModelsCount(
-            list.filter((p) => p.modelUrl && !p.modelUrl.includes('/image/upload/')).length
-          );
         },
         (err) => console.warn('products subscription error', err)
       );
@@ -604,8 +593,7 @@ export default function AdminDashboard() {
   const kpiValues = {
     revenue,
     orders: orderCount,
-    visitors: products.length,   // re-purposed as "products" count for now
-    models: modelsCount
+    visitors: products.length
   };
 
   async function handleDeleteProduct(id) {
@@ -650,14 +638,11 @@ export default function AdminDashboard() {
                   <div>
                     <h3 className="text-white font-semibold text-lg">AI Studio</h3>
                     <p className="text-sm text-white/60 mt-1 max-w-md">
-                      المكان الوحيد لرفع الصور وإضافة المنتجات. ارفع عدة صور، اختر واحدة لتحويلها إلى نموذج ثلاثي الأبعاد، وانشر فوراً.
+                      المكان الوحيد لرفع الصور وإضافة المنتجات. ارفع عدة صور وانشر فوراً.
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <span className="chip bg-white/5 border-white/10 text-white/70">
                         <Boxes size={11} className="text-peach" /> صور متعددة
-                      </span>
-                      <span className="chip bg-white/5 border-white/10 text-white/70">
-                        <Sparkles size={11} className="text-peach" /> 2D → 3D
                       </span>
                       <span className="chip bg-white/5 border-white/10 text-white/70">
                         نشر فوري

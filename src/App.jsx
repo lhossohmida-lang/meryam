@@ -19,7 +19,7 @@ import AdminLogin from './components/AdminLogin.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 // ---------------------------------------------------------------------------
-//  Cart context — minimal but real. Shared by ProductCard3D, the bottom-nav
+//  Cart context — minimal but real. Shared by the storefront, bottom-nav
 //  badge, and (later) the checkout sheet.
 // ---------------------------------------------------------------------------
 const CartContext = createContext(null);

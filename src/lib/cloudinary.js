@@ -16,9 +16,8 @@
 //        VITE_CLOUDINARY_UPLOAD_PRESET=<your-preset-name>
 //   5. Restart `npm run dev`.
 //
-//  Endpoints used:
+//  Endpoint used:
 //   • images:  /v1_1/{cloud}/image/upload
-//   • models:  /v1_1/{cloud}/raw/upload    (for .glb, .gltf, etc.)
 // =============================================================================
 
 const CLOUD_NAME    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;

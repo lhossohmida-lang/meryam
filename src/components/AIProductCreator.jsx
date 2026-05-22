@@ -1,21 +1,18 @@
 // =============================================================================
-//  WALIDA — AI Product Creator (Multi-image edition)
+//  WALIDA — Product Creator (Multi-image edition)
 // -----------------------------------------------------------------------------
 //  Drag-and-drop multiple images into the studio. Each one becomes part of
-//  the product gallery. The admin picks ONE image as the "3D source" — that
-//  image is sent through the generative pipeline (Tripo3D / Meshy) to produce
-//  a `.glb` model for the interactive WebGL card.
+//  the product gallery. All images are uploaded as-is (2D).
 //
 //  Final Firestore record shape:
 //    {
 //      nameAr, nameEn, price, category,
-//      images:  [{ url, is3DSource }],   // gallery (any size, primary marked)
-//      imageUrl: string,                  // convenience: the 3D-source URL
-//      modelUrl: string,                  // .glb on Firebase Storage
+//      images:  [{ url }],   // gallery
+//      imageUrl: string,     // convenience: primary photo
 //      jobId, source, createdAt
 //    }
 //
-//  UI states:  idle → generating → saving → done | error
+//  UI states:  idle → saving → done | error
 // =============================================================================
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -23,11 +20,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, Image as ImageIcon, Sparkles, Loader2, ArrowLeft,
-  CheckCircle2, AlertCircle, Wand2, Boxes, X, Box, Plus, Image
+  CheckCircle2, AlertCircle, Wand2, X, Plus, Image
 } from 'lucide-react';
 
-import { convertImageTo3D } from '../lib/aiPipeline.js';
-import { saveProduct, recordGenerationJob, pingFirebase } from '../firebase.js';
+import { saveProduct, pingFirebase } from '../firebase.js';
 import {
   uploadToCloudinary,
   pingCloudinary,
@@ -36,8 +32,7 @@ import {
 } from '../lib/cloudinary.js';
 
 // ---------------------------------------------------------------------------
-//  Glowing loading spinner — tri-ring SVG with the brand gradient and a
-//  pulsing glow halo.
+//  Glowing loading spinner
 // ---------------------------------------------------------------------------
 function GlowSpinner({ percent = 0, label = 'Working…' }) {
   const r = 60, c = 2 * Math.PI * r;
@@ -74,15 +69,13 @@ function GlowSpinner({ percent = 0, label = 'Working…' }) {
 }
 
 // ---------------------------------------------------------------------------
-//  Local helpers — produce a stable, in-memory record for each picked file
-//  so previews and "3D source" picking don't reset between renders.
+//  Local helpers
 // ---------------------------------------------------------------------------
 function makeAsset(file) {
   return {
     id: cryptoId(),
     file,
-    preview: URL.createObjectURL(file),
-    mode: '2d'   // default — admin toggles to '3d' per image
+    preview: URL.createObjectURL(file)
   };
 }
 
@@ -91,7 +84,7 @@ function cryptoId() {
 }
 
 // ---------------------------------------------------------------------------
-//  Multi-image drop zone — accepts many files at once, supports click-to-pick.
+//  Multi-image drop zone
 // ---------------------------------------------------------------------------
 function DropZone({ onFiles, disabled }) {
   const inputRef = useRef(null);
@@ -131,7 +124,7 @@ function DropZone({ onFiles, disabled }) {
         </div>
         <h3 className="mt-4 text-white font-semibold">اسحب صور المنتج هنا</h3>
         <p className="text-white/55 text-sm mt-1 max-w-md mx-auto">
-          يمكنك إضافة عدة صور — اختاري واحدة منها كمصدر للنموذج ثلاثي الأبعاد.
+          يمكنك إضافة عدة صور للمنتج.
         </p>
         <button type="button" className="btn-pill mt-4 !bg-white/10 !text-white/90 !border-white/15">
           <Plus size={14} />
@@ -143,10 +136,9 @@ function DropZone({ onFiles, disabled }) {
 }
 
 // ---------------------------------------------------------------------------
-//  Gallery strip — each thumbnail has an independent 2D/3D toggle. Any
-//  number of images can be marked for 3D conversion (or none).
+//  Gallery strip — image thumbnails with remove button.
 // ---------------------------------------------------------------------------
-function GalleryStrip({ assets, setMode, removeAsset, disabled }) {
+function GalleryStrip({ assets, removeAsset, disabled }) {
   if (!assets.length) return null;
   return (
     <motion.div
@@ -155,90 +147,43 @@ function GalleryStrip({ assets, setMode, removeAsset, disabled }) {
       className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3"
     >
       <AnimatePresence>
-        {assets.map((a, i) => {
-          const is3D = a.mode === '3d';
-          return (
-            <motion.div
-              key={a.id}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.35, delay: i * 0.04 }}
-              className={`relative group rounded-2xl overflow-hidden border transition-all
-                ${is3D
-                  ? 'border-coral shadow-[0_0_0_2px_rgba(255,139,122,0.35),0_18px_40px_-15px_rgba(255,139,122,0.5)]'
-                  : 'border-white/10'}`}
-            >
-              <div className="relative aspect-square">
-                <img src={a.preview} alt="" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0" />
+        {assets.map((a, i) => (
+          <motion.div
+            key={a.id}
+            layout
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.35, delay: i * 0.04 }}
+            className="relative group rounded-2xl overflow-hidden border border-white/10"
+          >
+            <div className="relative aspect-square">
+              <img src={a.preview} alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0" />
 
-                {/* Remove */}
-                <button
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => removeAsset(a.id)}
-                  className="absolute top-2 right-2 grid place-items-center w-7 h-7 rounded-full bg-black/55 text-white/90 backdrop-blur hover:bg-black/80"
-                  aria-label="remove"
-                >
-                  <X size={12} />
-                </button>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => removeAsset(a.id)}
+                className="absolute top-2 right-2 grid place-items-center w-7 h-7 rounded-full bg-black/55 text-white/90 backdrop-blur hover:bg-black/80"
+                aria-label="remove"
+              >
+                <X size={12} />
+              </button>
 
-                <div className="absolute bottom-2 right-2 left-2 text-[10px] text-white/85 truncate">
-                  {a.file.name}
-                </div>
+              <div className="absolute bottom-2 right-2 left-2 text-[10px] text-white/85 truncate">
+                {a.file.name}
               </div>
-
-              {/* Per-image mode toggle */}
-              <div className="grid grid-cols-2 gap-0 bg-black/55 backdrop-blur border-t border-white/10">
-                <button
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => setMode(a.id, '2d')}
-                  className={`relative py-2 text-[11px] font-semibold inline-flex items-center justify-center gap-1.5 transition-colors
-                    ${!is3D ? 'text-white' : 'text-white/45 hover:text-white/75'}`}
-                >
-                  {!is3D && (
-                    <motion.span
-                      layoutId={`mode-bg-${a.id}`}
-                      className="absolute inset-0 bg-gradient-to-br from-baby to-lavender opacity-90"
-                      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                    />
-                  )}
-                  <span className="relative inline-flex items-center gap-1.5">
-                    <Image size={11} /> 2D
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => setMode(a.id, '3d')}
-                  className={`relative py-2 text-[11px] font-semibold inline-flex items-center justify-center gap-1.5 transition-colors
-                    ${is3D ? 'text-white' : 'text-white/45 hover:text-white/75'}`}
-                >
-                  {is3D && (
-                    <motion.span
-                      layoutId={`mode-bg-${a.id}`}
-                      className="absolute inset-0 bg-gradient-to-br from-coral to-peach"
-                      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                    />
-                  )}
-                  <span className="relative inline-flex items-center gap-1.5">
-                    <Box size={11} /> 3D
-                  </span>
-                </button>
-              </div>
-            </motion.div>
-          );
-        })}
+            </div>
+          </motion.div>
+        ))}
       </AnimatePresence>
     </motion.div>
   );
 }
 
 // ---------------------------------------------------------------------------
-//  Form fields — minimal but real.
+//  Form fields
 // ---------------------------------------------------------------------------
 function Field({ label, hint, ...props }) {
   return (
@@ -260,19 +205,11 @@ function Field({ label, hint, ...props }) {
 // ---------------------------------------------------------------------------
 const STATES = {
   IDLE: 'idle',
-  GENERATING: 'generating',
   SAVING: 'saving',
   DONE: 'done',
   ERROR: 'error'
 };
 
-// ---------------------------------------------------------------------------
-//  Setup banner — shown when Cloudinary isn't configured / reachable. Gives
-//  exact step-by-step setup instructions inline.
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-//  Setup banner — Firebase / Firestore not ready.
-// ---------------------------------------------------------------------------
 function FirebaseSetupBanner({ onRetry, reason, errorMessage }) {
   return (
     <motion.div
@@ -303,7 +240,7 @@ function FirebaseSetupBanner({ onRetry, reason, errorMessage }) {
                  target="_blank" rel="noreferrer"
                  className="text-peach underline underline-offset-2">
                 Firestore Database
-              </a>{' '}→ <span className="text-white font-semibold">Create database</span> → اختاري الموقع (eur3 أو us-central1) → <span className="text-white font-semibold">Start in production mode</span>.
+              </a>{' '}→ <span className="text-white font-semibold">Create database</span> → اختاري الموقع → <span className="text-white font-semibold">Start in production mode</span>.
             </li>
             <li>
               <a href="https://console.firebase.google.com/project/mreim-3027a/authentication/providers"
@@ -412,7 +349,7 @@ function CloudinarySetupBanner({ onRetry, reason, errorMessage }) {
 
 export default function AIProductCreator() {
   const navigate = useNavigate();
-  const [assets, setAssets] = useState([]); // [{id, file, preview, is3DSource}]
+  const [assets, setAssets] = useState([]);
   const [meta, setMeta] = useState({ nameAr: '', nameEn: '', price: '', category: '' });
   const [state, setState] = useState(STATES.IDLE);
   const [progress, setProgress] = useState({ percent: 0, label: '' });
@@ -426,14 +363,12 @@ export default function AIProductCreator() {
   const [fbReason, setFbReason] = useState(null);
   const [fbErrorMsg, setFbErrorMsg] = useState(null);
 
-  // Verify Cloudinary + Firebase on mount and on demand.
   async function runHealthCheck() {
     setCloudOk(null);
     setFbOk(null);
     setCloudErrorMsg(null);
     setFbErrorMsg(null);
 
-    // Cloudinary
     if (!isCloudinaryConfigured()) {
       setCloudReason('missing-env');
       setCloudOk(false);
@@ -444,7 +379,6 @@ export default function AIProductCreator() {
       setCloudOk(c.ok);
     }
 
-    // Firebase (auth + Firestore)
     const f = await pingFirebase();
     setFbReason(f.ok ? null : f.reason);
     setFbErrorMsg(f.ok ? null : (f.error?.message || null));
@@ -460,11 +394,6 @@ export default function AIProductCreator() {
     setAssets((prev) => prev.filter((a) => a.id !== id));
   }
 
-  function setMode(id, mode) {
-    setAssets((prev) => prev.map((a) => (a.id === id ? { ...a, mode } : a)));
-  }
-
-  // Clean up object URLs on unmount.
   useEffect(() => () => assets.forEach((a) => URL.revokeObjectURL(a.preview)), []); // eslint-disable-line
 
   function reset() {
@@ -483,91 +412,45 @@ export default function AIProductCreator() {
 
     setError(null);
     setState(STATES.SAVING);
-    setProgress({ percent: 2, label: 'Preparing studio…' });
+    setProgress({ percent: 2, label: 'Preparing…' });
 
     const jobId = (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2))
       .replaceAll('-', '');
     const total = assets.length;
-    // Each image takes one "slot"; 3D-flagged images take an extra slot for
-    // the model conversion + upload. Used to keep the progress bar honest.
-    const slots = total + assets.filter((a) => a.mode === '3d').length;
-    let done = 0;
-    const setStep = (label, frac = 0) =>
-      setProgress({
-        percent: Math.min(2 + ((done + frac) / slots) * 95, 97),
-        label
-      });
 
     try {
       const uploads = [];
 
       for (let i = 0; i < total; i++) {
         const a = assets[i];
-        const baseLabel = `الصورة ${i + 1}/${total} · رفع`;
-
-        // a) Upload the photo itself (gallery asset).
-        setStep(baseLabel, 0);
+        const label = `الصورة ${i + 1}/${total} · رفع`;
+        setProgress({
+          percent: Math.min(2 + ((i / total) * 93), 95),
+          label
+        });
         const { url: imageUrl } = await uploadToCloudinary(a.file, {
           resourceType: 'image',
           folder: `walida/products/${jobId}`,
           publicId: a.id,
-          onProgress: (p) => setStep(`${baseLabel} · ${Math.round(p)}%`, p / 100)
+          onProgress: (p) => setProgress({
+            percent: Math.min(2 + (((i + p / 100) / total) * 93), 95),
+            label: `${label} · ${Math.round(p)}%`
+          })
         });
-        done += 1;
-
-        let modelUrl = null;
-
-        // b) If this image is marked '3d', run the AI pipeline + upload .glb.
-        if (a.mode === '3d') {
-          const stage = `الصورة ${i + 1}/${total} · تحويل 3D`;
-          setStep(stage, 0);
-          const { blob, simulated } = await convertImageTo3D(a.file, {
-            onProgress: (p) => setStep(`${stage} · ${Math.round(p.percent)}%`, p.percent / 100 * 0.7)
-          });
-          if (blob && !simulated) {
-            try {
-              setStep(`${stage} · رفع النموذج…`, 0.7);
-              const res = await uploadToCloudinary(blob, {
-                resourceType: 'raw',
-                folder: 'walida/models',
-                publicId: `${a.id}.glb`,
-                onProgress: (p) => setStep(`${stage} · رفع النموذج · ${Math.round(p)}%`, 0.7 + (p / 100) * 0.3)
-              });
-              modelUrl = res.url;
-            } catch (e) {
-              console.warn('[walida] .glb upload skipped:', e.message);
-            }
-          }
-          done += 1;
-        }
-
-        uploads.push({
-          url: imageUrl,
-          mode: a.mode,           // '2d' | '3d'
-          modelUrl                // null for 2D, Cloudinary URL for 3D (when real)
-        });
+        uploads.push({ url: imageUrl });
       }
 
-      // Persist the product (97% → 100%).
       setProgress({ percent: 98, label: 'جاري حفظ المنتج…' });
-      const primaryUrl =
-        uploads.find((u) => u.mode === '3d' && u.modelUrl)?.url ?? uploads[0].url;
-      const productModelUrl = uploads.find((u) => u.modelUrl)?.modelUrl ?? null;
 
       const productId = await saveProduct({
         nameAr: meta.nameAr,
         nameEn: meta.nameEn || meta.nameAr,
         price: Number(meta.price),
         category: meta.category || 'general',
-        images: uploads,           // [{ url, mode, modelUrl }]
-        imageUrl: primaryUrl,      // convenience: primary photo
-        modelUrl: productModelUrl, // convenience: first available .glb
+        images: uploads,
+        imageUrl: uploads[0].url,
         jobId,
-        source: 'ai-pipeline'
-      });
-
-      await recordGenerationJob(jobId, {
-        productId, status: 'success', images: uploads
+        source: 'product-creator'
       });
 
       setSavedProductId(productId);
@@ -580,9 +463,7 @@ export default function AIProductCreator() {
     }
   }
 
-  const busy = state === STATES.GENERATING || state === STATES.SAVING;
-  const count2D = assets.filter((a) => a.mode === '2d').length;
-  const count3D = assets.filter((a) => a.mode === '3d').length;
+  const busy = state === STATES.SAVING;
 
   return (
     <div className="min-h-screen bg-graphite bg-admin-aurora text-white">
@@ -594,15 +475,13 @@ export default function AIProductCreator() {
             <ArrowLeft size={14} /> Back
           </Link>
           <div className="text-center">
-            <div className="font-arabic text-xl font-extrabold">منشئ المنتجات بالذكاء الاصطناعي</div>
-            <div className="text-shimmer text-[10px] tracking-[0.4em] font-semibold">AI PRODUCT CREATOR</div>
+            <div className="font-arabic text-xl font-extrabold">منشئ المنتجات</div>
+            <div className="text-shimmer text-[10px] tracking-[0.4em] font-semibold">PRODUCT CREATOR</div>
           </div>
-          <span className="chip bg-white/5 border-white/10 text-white/70">
-            <Sparkles size={12} className="text-peach" /> 2D → 3D
-          </span>
+          <span className="w-10" />
         </div>
 
-        {/* Setup banners — only show when a service isn't reachable */}
+        {/* Setup banners */}
         {fbOk === false && (
           <FirebaseSetupBanner
             onRetry={runHealthCheck}
@@ -632,37 +511,26 @@ export default function AIProductCreator() {
               )}
             </div>
             <p className="text-xs text-white/50 mb-4">
-              أضيفي عدة صور — ثم اختاري لكل صورة: تبقى كما هي 2D أم تتحوّل إلى نموذج 3D.
+              أضيفي عدة صور للمنتج.
             </p>
 
             <DropZone onFiles={addFiles} disabled={busy} />
 
             <GalleryStrip
               assets={assets}
-              setMode={setMode}
               removeAsset={removeAsset}
               disabled={busy}
             />
 
-            {assets.length > 0 && (
-              <div className="mt-4 flex items-center justify-between text-xs text-white/55 gap-3 flex-wrap">
-                <div className="inline-flex items-center gap-2">
-                  <span className="chip bg-white/5 border-white/10 text-white/75">
-                    <Image size={11} /> {count2D} صورة 2D
-                  </span>
-                  <span className="chip bg-coral/15 border-coral/30 text-peach">
-                    <Box size={11} /> {count3D} نموذج 3D
-                  </span>
-                </div>
-                {!busy && (
-                  <button
-                    type="button"
-                    onClick={reset}
-                    className="text-white/50 hover:text-white inline-flex items-center gap-1"
-                  >
-                    <X size={11} /> مسح الكل
-                  </button>
-                )}
+            {assets.length > 0 && !busy && (
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={reset}
+                  className="text-white/50 hover:text-white inline-flex items-center gap-1 text-xs"
+                >
+                  <X size={11} /> مسح الكل
+                </button>
               </div>
             )}
           </div>
@@ -710,7 +578,7 @@ export default function AIProductCreator() {
               {busy ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  {state === STATES.GENERATING ? 'يجري التحويل…' : 'يجري الحفظ…'}
+                  يجري الحفظ…
                 </>
               ) : fbOk === false ? (
                 <>
@@ -733,11 +601,7 @@ export default function AIProductCreator() {
             <ul className="mt-5 grid gap-2 text-xs text-white/55">
               <li className="flex items-center gap-2">
                 <Image size={12} className="text-peach" />
-                الصور المعلَّمة 2D تُرفع كما هي
-              </li>
-              <li className="flex items-center gap-2">
-                <Box size={12} className="text-peach" />
-                الصور المعلَّمة 3D تُحوَّل إلى نموذج .glb
+                الصور تُرفع على Cloudinary
               </li>
               <li className="flex items-center gap-2">
                 <Sparkles size={12} className="text-peach" />
@@ -759,7 +623,7 @@ export default function AIProductCreator() {
           </div>
         </div>
 
-        {/* Pipeline overlay — gorgeous, stylised, glowing */}
+        {/* Saving overlay */}
         <AnimatePresence>
           {busy && (
             <motion.div
@@ -772,9 +636,9 @@ export default function AIProductCreator() {
                 className="glass-dark border-hairline rounded-[32px] p-10 text-center w-[min(420px,90vw)]"
               >
                 <GlowSpinner percent={progress.percent} label={progress.label} />
-                <h3 className="text-white font-semibold mt-6">يصنع السحر…</h3>
+                <h3 className="text-white font-semibold mt-6">جاري الرفع…</h3>
                 <p className="text-sm text-white/55 mt-1">
-                  تحويل الصورة إلى نموذج ثلاثي الأبعاد، ثم رفع المعرض، ثم النشر التلقائي.
+                  رفع الصور ثم النشر التلقائي.
                 </p>
               </motion.div>
             </motion.div>
@@ -816,9 +680,4 @@ export default function AIProductCreator() {
       </div>
     </div>
   );
-}
-
-function fileExt(file) {
-  const m = file.name.split('.').pop();
-  return (m || 'png').toLowerCase();
 }
