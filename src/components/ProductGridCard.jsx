@@ -66,7 +66,6 @@ export default function ProductGridCard({ product, index = 0, onOpen }) {
         <img
           src={photo}
           alt={product.nameAr || ''}
-          loading="lazy"
           onError={() => setImgError(true)}
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-[cubic-bezier(.22,1,.36,1)] group-hover:scale-110"
         />
