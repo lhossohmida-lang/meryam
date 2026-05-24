@@ -1,27 +1,31 @@
 // =============================================================================
 //  WALIDA — Splash screen (storefront entry intro)
 // -----------------------------------------------------------------------------
-//  Plays a short brand video the first time a visitor lands on the storefront,
-//  then fades out and calls onComplete(). Two assets ship in `public/splash/`:
+//  Plays a short brand video every time a visitor opens / refreshes the
+//  storefront, then fades out and calls onComplete(). Two assets ship in
+//  `public/splash/`:
 //
 //    • intro-mobile.mp4   → portrait video for narrow viewports
 //    • intro-desktop.mp4  → landscape video for wider viewports
 //
 //  Selection runs once at mount based on `window.innerWidth` (cheap, accurate
-//  enough). We don't react to resize mid-play because the splash is < 4s — by
+//  enough). We don't react to resize mid-play because the splash is ~4s — by
 //  the time the user rotates their device the intro is already gone.
 //
 //  Behaviour:
 //    • Auto-plays muted (browser autoplay policies require muted on mobile).
-//    • Locks for a fixed 4 seconds then fades out — independent of the video
-//      length so a slow first-byte from the CDN doesn't soft-block the page.
+//    • Dismisses on whichever fires first: the 4-second cap, the video's own
+//      `onEnded`, a tap, or any key press. That keeps the wait short even if
+//      the video is longer than the cap.
 //    • Fixed full-viewport overlay with high z-index; covers everything.
-//    • Skippable: tapping anywhere or pressing any key dismisses immediately.
 // =============================================================================
 
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 
+// Hard cap on how long visitors wait before the storefront appears.
+// The video itself can be longer — we cut it short with this timer; or
+// shorter — `onEnded` triggers dismiss earlier. Whichever comes first wins.
 const SPLASH_DURATION_MS = 4000;
 const MOBILE_BREAKPOINT_PX = 768;
 
@@ -90,12 +94,12 @@ export default function SplashScreen({ onComplete }) {
         onEnded={dismiss}
         className="absolute inset-0 w-full h-full object-cover"
       />
-      {/* Subtle "skip" hint, fades in after one second so it doesn't compete
+      {/* Subtle "skip" hint, fades in halfway through so it doesn't compete
           with the brand opening. */}
       <motion.span
         initial={{ opacity: 0 }}
         animate={{ opacity: 0.7 }}
-        transition={{ delay: 1.2, duration: 0.6 }}
+        transition={{ delay: 0.8, duration: 0.5 }}
         className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/70 text-xs tracking-[0.3em]"
       >
         تخطّي

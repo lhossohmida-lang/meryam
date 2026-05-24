@@ -683,8 +683,8 @@ export default function ClientStorefront() {
           key isn't configured — safe for fresh installs / forks). */}
       <AIChatWidget />
 
-      {/* 4-second intro video — desktop variant on ≥768px viewports,
-          portrait variant on phones. Plays once per browser tab. */}
+      {/* ~2-second intro video — desktop variant on ≥768px viewports,
+          portrait variant on phones. Plays on every page load / refresh. */}
       <AnimatePresence>
         {showSplash && <SplashScreen onComplete={handleSplashDone} />}
       </AnimatePresence>
