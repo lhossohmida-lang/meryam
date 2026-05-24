@@ -29,13 +29,13 @@ export default function ProtectedRoute({ children }) {
   // Soft full-screen loader while we wait for the first auth tick.
   if (!state.ready) {
     return (
-      <div className="min-h-screen bg-graphite bg-admin-aurora text-white grid place-items-center">
+      <div className="min-h-screen bg-pearl bg-aurora text-ink grid place-items-center">
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-          className="glass-dark border-hairline rounded-3xl px-8 py-6 flex items-center gap-3"
+          className="glass-strong border-hairline rounded-3xl px-8 py-6 flex items-center gap-3"
         >
-          <Loader2 size={16} className="animate-spin text-peach" />
-          <span className="text-sm text-white/80">جاري التحقق…</span>
+          <Loader2 size={16} className="animate-spin text-coral" />
+          <span className="text-sm text-ink/80">جاري التحقق…</span>
         </motion.div>
       </div>
     );

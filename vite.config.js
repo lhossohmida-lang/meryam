@@ -46,7 +46,21 @@ export default defineConfig({
         // Cache static assets and Firebase Storage so the storefront keeps
         // feeling premium even on flaky networks.
         globPatterns: ['**/*.{js,css,html,svg,png,jpg,woff2,mp4}'],
+        // Don't precache the splash intro videos — they're 2-3 MB each and
+        // only needed on first visit. The browser caches them via the
+        // runtime rule below, so revisits still load instantly.
+        globIgnores: ['**/splash/**'],
         runtimeCaching: [
+          {
+            // Splash videos — cache-first after the first download so a
+            // repeat visit doesn't re-fetch a multi-MB file.
+            urlPattern: /\/splash\/.*\.mp4$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'walida-splash',
+              expiration: { maxEntries: 4, maxAgeSeconds: 60 * 60 * 24 * 90 }
+            }
+          },
           {
             urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',

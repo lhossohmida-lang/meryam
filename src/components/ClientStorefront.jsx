@@ -24,6 +24,7 @@ import {
 import ProductGridCard from './ProductGridCard.jsx';
 import ProductDetail from './ProductDetail.jsx';
 import AIChatWidget from './AIChatWidget.jsx';
+import SplashScreen from './SplashScreen.jsx';
 import { useCart } from '../App.jsx';
 import { db } from '../firebase.js';
 
@@ -557,6 +558,14 @@ export default function ClientStorefront() {
   const [navTab, setNavTab] = useState('home');     // home | grid | fav | cart | me
   const [openSheet, setOpenSheet] = useState(null); // 'cart' | 'fav' | 'me' | null
   const [openProduct, setOpenProduct] = useState(null);
+  // Splash plays on every page load (including refresh). It's wired to the
+  // component mount, so SPA route changes inside the storefront don't replay
+  // it — only a real page load / refresh does.
+  const [showSplash, setShowSplash] = useState(true);
+
+  function handleSplashDone() {
+    setShowSplash(false);
+  }
   const categoryRef = useRef(null);
 
   // Nav button handler — routes to the right action per icon.
@@ -673,6 +682,12 @@ export default function ClientStorefront() {
       {/* Gemini-powered storefront concierge (hides itself if the API
           key isn't configured — safe for fresh installs / forks). */}
       <AIChatWidget />
+
+      {/* 4-second intro video — desktop variant on ≥768px viewports,
+          portrait variant on phones. Plays once per browser tab. */}
+      <AnimatePresence>
+        {showSplash && <SplashScreen onComplete={handleSplashDone} />}
+      </AnimatePresence>
     </div>
   );
 }

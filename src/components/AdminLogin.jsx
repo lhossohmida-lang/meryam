@@ -100,7 +100,7 @@ export default function AdminLogin() {
         </div>
 
         {/* Mode toggle */}
-        <div className="grid grid-cols-2 gap-1 p-1 mb-6 bg-white/5 border border-white/10 rounded-2xl">
+        <div className="grid grid-cols-2 gap-1 p-1 mb-6 bg-ink/5 border border-ink/10 rounded-2xl">
           {[
             { id: MODES.SIGNIN, label: 'تسجيل الدخول' },
             { id: MODES.SIGNUP, label: 'حساب جديد' }
@@ -146,9 +146,9 @@ export default function AdminLogin() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="اسم العرض"
-                    className="w-full bg-white/[0.06] border border-white/10 rounded-2xl pl-11 pr-4 py-3
-                               text-white placeholder:text-ink/30 outline-none
-                               focus:border-coral focus:bg-white/[0.09] transition"
+                    className="w-full bg-white/70 border border-ink/10 rounded-2xl pl-11 pr-4 py-3
+                               text-ink placeholder:text-ink/30 outline-none
+                               focus:border-coral focus:bg-white/90 transition"
                   />
                 </div>
               </motion.label>
@@ -165,9 +165,9 @@ export default function AdminLogin() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@walida.shop"
-                className="w-full bg-white/[0.06] border border-white/10 rounded-2xl pl-11 pr-4 py-3
-                           text-white placeholder:text-ink/30 outline-none
-                           focus:border-coral focus:bg-white/[0.09] transition"
+                className="w-full bg-white/70 border border-ink/10 rounded-2xl pl-11 pr-4 py-3
+                           text-ink placeholder:text-ink/30 outline-none
+                           focus:border-coral focus:bg-white/90 transition"
               />
             </div>
           </label>
@@ -193,14 +193,14 @@ export default function AdminLogin() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={isSignup ? '6 أحرف على الأقل' : '••••••••'}
-                className="w-full bg-white/[0.06] border border-white/10 rounded-2xl pl-11 pr-12 py-3
-                           text-white placeholder:text-ink/30 outline-none
-                           focus:border-coral focus:bg-white/[0.09] transition"
+                className="w-full bg-white/70 border border-ink/10 rounded-2xl pl-11 pr-12 py-3
+                           text-ink placeholder:text-ink/30 outline-none
+                           focus:border-coral focus:bg-white/90 transition"
               />
               <button
                 type="button"
                 onClick={() => setShowPwd((s) => !s)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/45 hover:text-ink/80"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/45 hover:text-ink/80"
               >
                 {showPwd ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
@@ -212,7 +212,7 @@ export default function AdminLogin() {
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                className="flex items-start gap-2 p-3 rounded-2xl bg-rose-400/10 border border-rose-400/30 text-rose-200 text-sm"
+                className="flex items-start gap-2 p-3 rounded-2xl bg-rose-400/10 border border-rose-400/30 text-rose-700 text-sm"
               >
                 <AlertCircle size={14} className="mt-0.5 shrink-0" />
                 <span>{error}</span>
