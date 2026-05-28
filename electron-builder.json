@@ -1,0 +1,39 @@
+{
+  "appId": "com.baraa.kids",
+  "productName": "Baraa Kids",
+  "copyright": "Copyright © 2025 Baraa Kids",
+  "directories": {
+    "output": "dist-exe"
+  },
+  "files": [
+    "dist/**/*",
+    "electron-main.js",
+    "node_modules/**/*",
+    "package.json"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ]
+  },
+  "nsis": {
+    "oneClick": true,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": false,
+    "deleteAppDataOnUninstall": false,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Baraa Kids"
+  },
+  "extraMetadata": {
+    "main": "electron-main.js"
+  }
+}
+

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Baraa Kids</string>
+    <string name="title_activity_main">Baraa Kids</string>
+    <string name="package_name">com.baraa.kids</string>
+    <string name="custom_url_scheme">com.baraa.kids</string>
+</resources>

@@ -13,12 +13,13 @@
 // =============================================================================
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { collection, onSnapshot } from 'firebase/firestore';
 import {
   Search, Home, Grid, Heart, ShoppingBag, User, Sparkles, ChevronLeft,
-  X, Trash2, Box, AlertCircle, RefreshCw
+  X, Trash2, Box, AlertCircle, RefreshCw, Download, Smartphone, MonitorSmartphone, QrCode
 } from 'lucide-react';
 
 import ProductGridCard from './ProductGridCard.jsx';
@@ -165,8 +166,142 @@ function Hero() {
 }
 
 // ---------------------------------------------------------------------------
-//  Category strip
+//  Category strip — chips with a bubble-pop animation on tap.
+//
+//  Visual layering:
+//    1. Inside each chip: a shared `layoutId="active-chip-bubble"` coral
+//       gradient that FLIP-slides between chips as the active state moves.
+//    2. In a document.body portal: a pulse ring + 12 coral particles bursting
+//       radially from the tap point. The portal escapes the strip's
+//       `overflow-x-auto` (which silently coerces overflow-y to auto and
+//       would otherwise clip everything taller than 42px).
+//
+//  Each burst is a one-shot record in the `bursts` array; a 800 ms timer
+//  removes it after the animation completes so the DOM stays clean.
 // ---------------------------------------------------------------------------
+function BurstParticles({ origin, onDone }) {
+  // origin = viewport-coord center of the chip at click time.
+  useEffect(() => {
+    const id = setTimeout(onDone, 800);
+    return () => clearTimeout(id);
+  }, [onDone]);
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(
+    <div
+      className="fixed pointer-events-none z-[80]"
+      style={{ left: origin.x, top: origin.y }}
+      aria-hidden
+    >
+      {/* Expanding pulse ring */}
+      <motion.span
+        initial={{ scale: 0.5, opacity: 0.75 }}
+        animate={{ scale: 3.2, opacity: 0 }}
+        transition={{ duration: 0.7, ease: 'easeOut' }}
+        className="absolute rounded-full border-[3px] border-coral"
+        style={{ width: 64, height: 64, left: -32, top: -32 }}
+      />
+      {/* Soft glow disc that bursts and fades */}
+      <motion.span
+        initial={{ scale: 0.4, opacity: 0.5 }}
+        animate={{ scale: 2.4, opacity: 0 }}
+        transition={{ duration: 0.55, ease: 'easeOut' }}
+        className="absolute rounded-full bg-coral/40 blur-md"
+        style={{ width: 50, height: 50, left: -25, top: -25 }}
+      />
+      {/* 12 particles flying radially */}
+      {Array.from({ length: 12 }).map((_, i) => {
+        const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.2;
+        const dist  = 56 + Math.random() * 18;
+        const size  = 6 + Math.round(Math.random() * 4); // 6–10 px
+        // Alternate coral / peach for a richer burst
+        const color = i % 2 === 0 ? '#FF8B7A' : '#FFB4A2';
+        return (
+          <motion.span
+            key={i}
+            initial={{ x: 0, y: 0, scale: 1, opacity: 0.95 }}
+            animate={{
+              x: Math.cos(angle) * dist,
+              y: Math.sin(angle) * dist,
+              scale: 0,
+              opacity: 0
+            }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute rounded-full"
+            style={{
+              width: size,
+              height: size,
+              left: -(size / 2),
+              top:  -(size / 2),
+              background: color
+            }}
+          />
+        );
+      })}
+    </div>,
+    document.body
+  );
+}
+
+function CategoryChip({ category, isActive, index, onClick }) {
+  // Each tap pushes a burst record. The portal then renders it independently
+  // of this component's layout, so the strip's overflow can't clip it.
+  const [bursts, setBursts] = useState([]);
+  const nextId = useRef(0);
+
+  function handleClick(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const burst = {
+      id: ++nextId.current,
+      x: rect.left + rect.width  / 2,
+      y: rect.top  + rect.height / 2
+    };
+    setBursts((prev) => [...prev, burst]);
+    onClick();
+  }
+
+  function removeBurst(id) {
+    setBursts((prev) => prev.filter((b) => b.id !== id));
+  }
+
+  return (
+    <>
+      <motion.button
+        initial={{ y: 12, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.45 + index * 0.05 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.88 }}
+        onClick={handleClick}
+        className={`relative px-5 py-2.5 rounded-2xl text-sm font-semibold
+          transition-colors duration-300
+          ${isActive
+            ? 'text-white shadow-glow'
+            : 'glass text-ink/80 hover:text-ink'}`}
+      >
+        {/* Sliding active background — the "bubble" itself. */}
+        {isActive && (
+          <motion.span
+            layoutId="active-chip-bubble"
+            className="absolute inset-0 rounded-2xl -z-10"
+            style={{ background: 'linear-gradient(135deg, #FF8B7A 0%, #FFB4A2 100%)' }}
+            transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+          />
+        )}
+        <span className="relative z-10">{category.ar}</span>
+      </motion.button>
+
+      {bursts.map((b) => (
+        <BurstParticles
+          key={b.id}
+          origin={{ x: b.x, y: b.y }}
+          onDone={() => removeBurst(b.id)}
+        />
+      ))}
+    </>
+  );
+}
+
 function CategoryStrip({ active, onChange }) {
   return (
     <motion.div
@@ -175,25 +310,15 @@ function CategoryStrip({ active, onChange }) {
       transition={{ delay: 0.4 }}
       className="mt-6 px-5 flex gap-2.5 overflow-x-auto no-scrollbar"
     >
-      {CATEGORIES.map((c, i) => {
-        const isActive = c.id === active;
-        return (
-          <motion.button
-            key={c.id}
-            initial={{ y: 12, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.45 + i * 0.05 }}
-            onClick={() => onChange(c.id)}
-            className={
-              isActive
-                ? 'px-5 py-2.5 rounded-2xl text-sm font-semibold text-white btn-coral !py-2 !px-5'
-                : 'px-5 py-2.5 rounded-2xl text-sm font-semibold glass text-ink/80'
-            }
-          >
-            {c.ar}
-          </motion.button>
-        );
-      })}
+      {CATEGORIES.map((c, i) => (
+        <CategoryChip
+          key={c.id}
+          category={c}
+          index={i}
+          isActive={c.id === active}
+          onClick={() => onChange(c.id)}
+        />
+      ))}
     </motion.div>
   );
 }
@@ -547,6 +672,145 @@ function ProfileSheet({ open, onClose }) {
 }
 
 // ---------------------------------------------------------------------------
+//  AppDownloadBanner — smart download button that detects device type:
+//   • Android / any mobile  → direct APK download
+//   • iOS                   → PWA install instructions
+//   • Desktop / PC          → EXE installer download
+// ---------------------------------------------------------------------------
+function AppDownloadBanner() {
+  const [showInstructions, setShowInstructions] = useState(false);
+  const [deferredPrompt, setDeferredPrompt]     = useState(null);
+  const [isPWAInstalled, setIsPWAInstalled]     = useState(false);
+
+  // Detect device type
+  const ua        = navigator.userAgent || '';
+  const isAndroid = /android/i.test(ua);
+  const isIOS     = /iphone|ipad|ipod/i.test(ua);
+  const isMobile  = isAndroid || isIOS || /mobile/i.test(ua);
+
+  const APK_URL = '/apk/baraa-kids.apk';
+  const EXE_URL = '/exe/baraa-kids-setup.exe';
+
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setDeferredPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    if (window.matchMedia('(display-mode: standalone)').matches) setIsPWAInstalled(true);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  if (isPWAInstalled) return null;
+
+  function triggerDownload(url, filename) {
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+  async function handleInstallPWA() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      setDeferredPrompt(null);
+    } else {
+      setShowInstructions(true);
+    }
+  }
+
+  // ── Button label + action based on device ──────────────────────────────
+  let btnLabel, btnIcon, btnAction, btnStyle;
+
+  if (isAndroid) {
+    btnLabel  = 'تحميل التطبيق APK';
+    btnIcon   = <Download size={16} />;
+    btnAction = () => triggerDownload(APK_URL, 'baraa-kids.apk');
+    btnStyle  = { background: 'linear-gradient(135deg,#3DDC84 0%,#00C853 100%)', boxShadow: '0 8px 32px rgba(61,220,132,0.4)' };
+  } else if (isIOS) {
+    btnLabel  = 'تثبيت التطبيق';
+    btnIcon   = <Smartphone size={16} />;
+    btnAction = () => setShowInstructions(true);
+    btnStyle  = { background: 'linear-gradient(135deg,#007AFF 0%,#5856D6 100%)', boxShadow: '0 8px 32px rgba(0,122,255,0.4)' };
+  } else {
+    // Desktop / PC → EXE
+    btnLabel  = 'تحميل للكمبيوتر EXE';
+    btnIcon   = <MonitorSmartphone size={16} />;
+    btnAction = () => triggerDownload(EXE_URL, 'baraa-kids-setup.exe');
+    btnStyle  = { background: 'linear-gradient(135deg,#FF8B7A 0%,#FFB4A2 100%)', boxShadow: '0 8px 32px rgba(255,139,122,0.4)' };
+  }
+
+  return (
+    <>
+      {/* Floating Download Button */}
+      <motion.div
+        initial={{ opacity: 0, y: 30, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 1.2, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="fixed bottom-24 left-4 z-40"
+      >
+        <motion.button
+          id={isAndroid ? 'btn-download-apk' : isIOS ? 'btn-install-ios' : 'btn-download-exe'}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.93 }}
+          onClick={btnAction}
+          className="flex items-center gap-2 px-4 py-3 rounded-2xl text-white font-semibold text-sm"
+          style={btnStyle}
+        >
+          {btnIcon}
+          <span>{btnLabel}</span>
+        </motion.button>
+      </motion.div>
+
+      {/* iOS instructions Modal */}
+      <AnimatePresence>
+        {showInstructions && (
+          <>
+            <motion.div
+              key="dl-backdrop"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowInstructions(false)}
+              className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-md"
+            />
+            <motion.div
+              key="dl-modal"
+              initial={{ opacity: 0, y: 40, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-x-4 bottom-6 z-50 glass-strong border-hairline rounded-3xl p-6"
+            >
+              <button
+                onClick={() => setShowInstructions(false)}
+                className="absolute top-4 left-4 grid place-items-center w-8 h-8 rounded-full glass text-ink/70"
+                aria-label="إغلاق"
+              >
+                <X size={14} />
+              </button>
+              <div className="text-center">
+                <div
+                  className="grid place-items-center w-16 h-16 mx-auto rounded-3xl mb-4"
+                  style={{ background: 'linear-gradient(135deg,#007AFF 0%,#5856D6 100%)' }}
+                >
+                  <Smartphone size={24} className="text-white" />
+                </div>
+                <h3 className="font-arabic text-xl font-extrabold text-ink mb-4">تثبيت تطبيق براءة</h3>
+                <div className="text-right grid gap-3">
+                  {[['١','اضغط على زر المشاركة ↑ في أسفل Safari'],['٢','اختر «إضافة إلى الشاشة الرئيسية»'],['٣','اضغط «إضافة» — سيظهر التطبيق على شاشتك!']]
+                    .map(([n, txt]) => (
+                      <div key={n} className="glass-card !rounded-2xl p-3 flex items-start gap-3">
+                        <span className="w-7 h-7 rounded-full bg-coral-peach text-white text-xs font-bold grid place-items-center shrink-0">{n}</span>
+                        <p className="text-sm text-ink/80" dangerouslySetInnerHTML={{ __html: txt }} />
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 //  Page composition
 // ---------------------------------------------------------------------------
 export default function ClientStorefront() {
@@ -682,6 +946,9 @@ export default function ClientStorefront() {
       {/* Gemini-powered storefront concierge (hides itself if the API
           key isn't configured — safe for fresh installs / forks). */}
       <AIChatWidget />
+
+      {/* Smart app download button — APK for Android, PWA for iOS/Desktop */}
+      <AppDownloadBanner />
 
       {/* ~2-second intro video — desktop variant on ≥768px viewports,
           portrait variant on phones. Plays on every page load / refresh. */}

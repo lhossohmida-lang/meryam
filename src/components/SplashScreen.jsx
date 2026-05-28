@@ -30,10 +30,10 @@ const SPLASH_DURATION_MS = 4000;
 const MOBILE_BREAKPOINT_PX = 768;
 
 function pickVideoSrc() {
-  if (typeof window === 'undefined') return '/splash/intro-desktop.mp4';
+  if (typeof window === 'undefined') return './splash/intro-desktop.mp4';
   return window.innerWidth < MOBILE_BREAKPOINT_PX
-    ? '/splash/intro-mobile.mp4'
-    : '/splash/intro-desktop.mp4';
+    ? './splash/intro-mobile.mp4'
+    : './splash/intro-desktop.mp4';
 }
 
 export default function SplashScreen({ onComplete }) {

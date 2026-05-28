@@ -6,7 +6,7 @@
   },
   "hosting": {
     "public": "dist",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "**/*.exe", "**/*.apk"],
     "rewrites": [
       { "source": "**", "destination": "/index.html" }
     ],
